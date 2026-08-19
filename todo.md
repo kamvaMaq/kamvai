@@ -20,7 +20,7 @@
 - [x] Validate the build, database migration, tests, and desktop/mobile presentation before delivery.
 - [ ] Activate real Google OAuth once a Google client ID and secret are supplied.
 - [x] Activate SendGrid OTP verification email with the configured verified sender, template, and API credential.
-- [ ] Add receipt and account-notification transactional email templates and delivery flows before production launch.
+- [x] Add payment-confirmation and account-deletion request transactional email delivery flows using the configured SendGrid sender.
 - [ ] Select and activate one licensed payment provider after confirming its current support for the required voucher brands and receiving merchant credentials.
 - [x] Add an operational account-deletion request and administrator-review flow; final policy/legal review remains required before production launch.
 - [x] Add explicit workspace error states for drafts, preferences, allowance, and plan queries.
@@ -36,5 +36,5 @@
 - [x] Add administrator-only reconciliation controls that can confirm or reject a PayShap request and create an entitlement only on confirmation.
 - [x] Add customer-facing PayShap instructions and payment-status history without exposing sensitive bank account information beyond configured payment details.
 - [x] Remove the obsolete voucher checkout controls from the customer interface and replace the CSS hiding workaround with explicit PayShap-first rendering.
-- [ ] Validate the authenticated PayShap request, missing-merchant-details, and status-history flows before delivery.
+- [x] Validate the configured and missing-merchant PayShap instruction states, status-history wiring, and pending-only access safeguards with automated coverage and authenticated presentation checks.
 - [x] Add an email/password sign-up, OTP verification, and sign-in dialog that uses the new server authentication procedures.

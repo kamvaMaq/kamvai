@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createPayShapPaymentRequest, createVoucherAttempt, listOpenPayShapRequests, listPayShapRequestsForUser, listVoucherAttemptsForUser, reconcilePayShapRequest } from "../db";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { getPayShapInstructions } from "../payShap";
 
 const planSchema = z.enum(["weekly", "monthly"]);
 const voucherSchema = z.enum(["kazang", "oneforyou", "blue", "ott"]);
@@ -16,10 +17,7 @@ export const paymentsRouter = router({
     const request = await createPayShapPaymentRequest({ userId: ctx.user.id, plan: input.plan });
     return {
       request,
-      paymentInstructionsConfigured: Boolean(process.env.PAYSHAP_SHAP_ID && process.env.PAYSHAP_RECIPIENT_NAME),
-      recipientName: process.env.PAYSHAP_RECIPIENT_NAME ?? null,
-      shapId: process.env.PAYSHAP_SHAP_ID ?? null,
-      message: "Your request is pending until Kamvai confirms the matching PayShap payment. A payment reference never unlocks access by itself.",
+      ...getPayShapInstructions({ recipientName: process.env.PAYSHAP_RECIPIENT_NAME, shapId: process.env.PAYSHAP_SHAP_ID }),
     };
   }),
   adminOpenPayShapRequests: adminProcedure.query(() => listOpenPayShapRequests()),

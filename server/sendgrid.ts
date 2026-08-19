@@ -3,6 +3,7 @@ const SENDER_VERIFICATION_CACHE_MS = 10 * 60 * 1000;
 let verifiedSenderUntil = 0;
 
 type OtpEmailInput = { to: string; firstName?: string | null; code: string; supportLink: string };
+type TransactionalEmailInput = { to: string; subject: string; text: string; html: string; category: "payment-confirmation" | "privacy-request" };
 
 export function getSendGridOtpConfig() {
   const apiKey = process.env.SENDGRID_API_KEY;
@@ -48,6 +49,27 @@ export async function sendOtpEmail(input: OtpEmailInput) {
     }),
   });
   if (!response.ok) throw new Error(`SendGrid rejected the OTP email request (${response.status}).`);
+}
+
+export async function sendTransactionalEmail(input: TransactionalEmailInput) {
+  const config = getSendGridOtpConfig();
+  if (!config) throw new Error("SendGrid delivery is not ready. Configure a verified sender address and API credential first.");
+  await assertVerifiedSender(config);
+  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: { email: config.from, name: "Kamvai" },
+      personalizations: [{ to: [{ email: input.to }] }],
+      subject: input.subject,
+      content: [
+        { type: "text/plain", value: input.text },
+        { type: "text/html", value: input.html },
+      ],
+      categories: [input.category],
+    }),
+  });
+  if (!response.ok) throw new Error(`SendGrid rejected the transactional email request (${response.status}).`);
 }
 
 export { OTP_EXPIRY_MINUTES };

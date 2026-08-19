@@ -27,6 +27,8 @@ PayShap is available through participating banks, and Standard Bank describes it
 
 Kamvai now includes an email/password sign-up, hashed expiring OTP, verified-email confirmation, and password sign-in flow. The SendGrid sender, API credential, and Dynamic Template are configured server-side. Google sign-in remains a future activation item because no Google OAuth client has been supplied.
 
+The configured SendGrid sender is also used for a **payment-confirmation email** after an authorised PayShap reconciliation activates a pass and for an **account-deletion request acknowledgement**. These deliveries are deliberately non-blocking: a confirmed entitlement or recorded privacy request is never rolled back simply because an email provider is temporarily unavailable.
+
 ## Final launch boundaries
 
 The manual PayShap route is now configured with the supplied recipient identifier and recipient name. The customer interface creates an expiring reference and shows the configured PayShap instructions. Paid access remains pending until an administrator reconciles the actual bank credit; this is deliberate and must not be relaxed without a bank-connected verification method.
@@ -34,6 +36,8 @@ The manual PayShap route is now configured with the supplied recipient identifie
 The application includes an account-deletion **request and review** workflow. Before a public launch, a qualified privacy and legal reviewer should finalise the published privacy notice, data-retention schedule, response timelines, and the operational procedure used when an administrator marks a request completed. The application does not make a legal-compliance determination.
 
 The interface has language selection and baseline resources for all 11 official South African languages. A native-speaker review of every production string, including emails and legal content, remains necessary before claiming full localisation coverage.
+
+> **Merchant-managed prerequisites.** Google OAuth cannot be activated without an OAuth client ID and secret created in the merchant’s Google Cloud project. Full-language publication requires a native-speaker or professional localisation review. These are governed external approvals rather than application-code defects.
 
 ## Reference
 

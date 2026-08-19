@@ -14,6 +14,7 @@ import {
   voucherRedemptionAttempts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { sendTransactionalEmail } from "./sendgrid";
 
 const FREE_GENERATION_LIMIT = 5;
 
@@ -68,6 +69,13 @@ export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result[0];
+}
+
+export async function getUserById(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   return result[0];
 }
 
@@ -238,6 +246,16 @@ export async function requestAccountDeletion(userId: number) {
   const id = nanoid();
   await db.insert(accountDeletionRequests).values({ id, userId });
   const [request] = await db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.id, id)).limit(1);
+  const user = await getUserById(userId);
+  if (user?.email) {
+    void sendTransactionalEmail({
+      to: user.email,
+      subject: "We received your Kamvai account-deletion request",
+      text: "We received your request to delete your Kamvai account data. This request is now pending review. You will receive a further update when it is processed.",
+      html: "<p>We received your request to delete your Kamvai account data.</p><p>This request is now pending review. You will receive a further update when it is processed.</p>",
+      category: "privacy-request",
+    }).catch(error => console.error("[Email] Account-deletion acknowledgement could not be sent:", error instanceof Error ? error.message : error));
+  }
   return request;
 }
 
@@ -287,6 +305,18 @@ export async function reconcilePayShapRequest(input: { requestId: string; adminU
     const duration = request.plan === "weekly" ? 7 : 30;
     const expiresAt = new Date(reconciledAt.getTime() + duration * 24 * 60 * 60 * 1000);
     await db.insert(entitlements).values({ id: nanoid(), userId: request.userId, plan: request.plan, status: "active", startedAt: reconciledAt, expiresAt, provider: "payshap_manual", providerReference: request.paymentReference });
+    const user = await getUserById(request.userId);
+    if (user?.email) {
+      const passName = request.plan === "weekly" ? "weekly" : "monthly";
+      const expiry = expiresAt.toLocaleDateString("en-ZA", { dateStyle: "long" });
+      void sendTransactionalEmail({
+        to: user.email,
+        subject: `Your Kamvai ${passName} pass is active`,
+        text: `Your PayShap payment has been confirmed. Your ${passName} Kamvai pass is now active until ${expiry}.`,
+        html: `<p>Your PayShap payment has been confirmed.</p><p>Your <strong>${passName}</strong> Kamvai pass is now active until <strong>${expiry}</strong>.</p>`,
+        category: "payment-confirmation",
+      }).catch(error => console.error("[Email] Payment confirmation could not be sent:", error instanceof Error ? error.message : error));
+    }
   }
   return { ...request, status: input.outcome, reconciledAt, reconciledByUserId: input.adminUserId, reconciliationNote: input.note?.trim() || null };
 }
