@@ -1,0 +1,30 @@
+# Project TODO
+
+- [x] Create the Kamvai application information architecture, polished responsive navigation, and cohesive visual theme.
+- [x] Implement an accessible content workspace for blog, email, code, and image generation with loading, error, and empty states.
+- [x] Add server-side AI text generation with Claude-compatible model selection, iterative refinements, and language-aware prompts.
+- [x] Add server-side AI image generation, prompt refinement, secure image URLs, and download actions.
+- [x] Add database tables and server procedures for saved drafts, draft revisions, generation usage, user preferences, consent records, entitlements, and voucher-redemption audit records.
+- [x] Enforce a rolling 24-hour free generation allowance entirely on the server and expose remaining allowance to the interface.
+- [x] Implement authenticated saved-draft stacks and protected draft retrieval.
+- [x] Implement account preferences for theme, language, and POPIA consent, with safe unauthenticated fallbacks.
+- [x] Add a dark/light theme toggle that respects system settings until a preference is selected.
+- [ ] Complete professional translation and native-speaker review of every interface string for all 11 official South African languages.
+- [x] Add react-i18next scaffolding, language selection, and baseline localized resources for all 11 official South African languages.
+- [x] Synchronize browser-based voice input with the active interface language and provide unsupported-language messaging.
+- [x] Add safe social-sharing actions for WhatsApp, Facebook, X, LinkedIn, and copy-link.
+- [x] Add public, crawler-readable draft preview pages with Open Graph metadata for shareable text content.
+- [x] Create subscription and voucher-redemption interface flows that never expose full voucher codes and are ready for a configured South African aggregator.
+- [x] Document the external Google, SendGrid, and payment-aggregator configuration required to activate provider-specific sign-in, OTP, receipts, payment webhooks, and voucher redemption.
+- [x] Add Vitest coverage for usage limits, masking behavior, privacy controls, and core server procedures.
+- [x] Validate the build, database migration, tests, and desktop/mobile presentation before delivery.
+- [ ] Activate real Google OAuth once a Google client ID and secret are supplied.
+- [ ] Activate SendGrid email/password, OTP verification, and transactional mail once a verified sender domain, template IDs, and SendGrid API key are supplied.
+- [ ] Select and activate one licensed payment provider after confirming its current support for the required voucher brands and receiving merchant credentials.
+- [ ] Add an operational POPIA account-deletion flow and final policy/legal review before production launch.
+- [x] Add explicit workspace error states for drafts, preferences, allowance, and plan queries.
+- [x] Detect unsupported voice languages before recording and show a language-specific fallback.
+- [x] Extend social sharing to generated image outputs with a safe public image preview route.
+- [x] Display voucher-redemption attempt history and provider configuration status in the workspace.
+- [x] Add Vitest coverage for privacy consent eligibility and protected payment/draft/preference procedures.
+- [ ] Run and record interactive smoke checks for core client actions before delivery.

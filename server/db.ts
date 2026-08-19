@@ -1,11 +1,37 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { nanoid } from "nanoid";
+import {
+  contentDrafts,
+  draftRevisions,
+  entitlements,
+  generationUsages,
+  InsertUser,
+  userPreferences,
+  users,
+  voucherRedemptionAttempts,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
+
+const FREE_GENERATION_LIMIT = 5;
+
+export function calculateUsageAllowance(input: { used: number; oldestGenerationAt?: Date | null; now?: Date; unlimited?: boolean; plan?: "weekly" | "monthly" }) {
+  if (input.unlimited) {
+    return { unlimited: true, limit: null, used: 0, remaining: null, resetsAt: null, plan: input.plan ?? "weekly" };
+  }
+  const now = input.now ?? new Date();
+  const resetAt = input.oldestGenerationAt ? new Date(input.oldestGenerationAt.getTime() + 24 * 60 * 60 * 1000) : now;
+  return { unlimited: false, limit: FREE_GENERATION_LIMIT, used: input.used, remaining: Math.max(0, FREE_GENERATION_LIMIT - input.used), resetsAt: resetAt, plan: "free" as const };
+}
+
+export function generationEligibility(input: { privacyConsentAt?: Date | null; allowance: { unlimited: boolean; remaining: number | null } }) {
+  if (!input.privacyConsentAt) return { allowed: false, reason: "privacy_consent_required" as const };
+  if (!input.allowance.unlimited && (input.allowance.remaining ?? 0) < 1) return { allowed: false, reason: "allowance_exhausted" as const };
+  return { allowed: true, reason: null } as const;
+}
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -19,74 +45,187 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+  if (!db) return;
+
+  const values: InsertUser = { openId: user.openId, lastSignedIn: new Date() };
+  const updateSet: Record<string, unknown> = { lastSignedIn: new Date() };
+  for (const field of ["name", "email", "loginMethod"] as const) {
+    if (user[field] !== undefined) {
+      values[field] = user[field] ?? null;
+      updateSet[field] = user[field] ?? null;
+    }
   }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  values.role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
+  updateSet.role = values.role;
+  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getPreferencesForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return { theme: "system" as const, locale: "en", privacyConsentAt: null, privacyConsentVersion: null };
+  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return result[0] ?? { theme: "system" as const, locale: "en", privacyConsentAt: null, privacyConsentVersion: null };
+}
+
+export async function updatePreferencesForUser(
+  userId: number,
+  data: { theme?: "system" | "light" | "dark"; locale?: string; acceptPrivacy?: boolean },
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const now = new Date();
+  const values = {
+    userId,
+    theme: data.theme ?? "system",
+    locale: data.locale ?? "en",
+    privacyConsentVersion: data.acceptPrivacy ? "2026-08" : null,
+    privacyConsentAt: data.acceptPrivacy ? now : null,
+  };
+  await db.insert(userPreferences).values(values).onDuplicateKeyUpdate({
+    set: {
+      ...(data.theme ? { theme: data.theme } : {}),
+      ...(data.locale ? { locale: data.locale } : {}),
+      ...(data.acceptPrivacy ? { privacyConsentVersion: "2026-08", privacyConsentAt: now } : {}),
+    },
+  });
+  return getPreferencesForUser(userId);
+}
+
+export async function getGenerationAllowance(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const now = new Date();
+  const [activePass] = await db.select().from(entitlements).where(and(
+    eq(entitlements.userId, userId),
+    eq(entitlements.status, "active"),
+    gt(entitlements.expiresAt, now),
+  )).limit(1);
+  if (activePass) return { unlimited: true, limit: null, used: 0, remaining: null, resetsAt: activePass.expiresAt, plan: activePass.plan };
+
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const [row] = await db.select({ count: sql<number>`count(*)`, oldest: sql<Date | null>`min(${generationUsages.createdAt})` }).from(generationUsages).where(and(
+    eq(generationUsages.userId, userId),
+    gte(generationUsages.createdAt, since),
+  ));
+  return calculateUsageAllowance({ used: Number(row?.count ?? 0), oldestGenerationAt: row?.oldest, now });
+}
+
+export async function recordGenerationUsage(userId: number, kind: "blog" | "email" | "code" | "image") {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.insert(generationUsages).values({ userId, kind });
+  return getGenerationAllowance(userId);
+}
+
+export async function listDraftsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contentDrafts).where(eq(contentDrafts.userId, userId)).orderBy(desc(contentDrafts.updatedAt));
+}
+
+export async function getDraftForUser(id: string, userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(contentDrafts).where(and(eq(contentDrafts.id, id), eq(contentDrafts.userId, userId))).limit(1);
+  return result[0];
+}
+
+export async function getPublicDraft(publicSlug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(contentDrafts).where(eq(contentDrafts.publicSlug, publicSlug)).limit(1);
+  return result[0];
+}
+
+export async function createDraft(input: {
+  userId: number;
+  kind: "blog" | "email" | "code" | "image";
+  title: string;
+  prompt: string;
+  language: string;
+  body?: string | null;
+  imageUrl?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const id = nanoid();
+  await db.insert(contentDrafts).values({ id, ...input });
+  return getDraftForUser(id, input.userId);
+}
+
+export async function updateDraftContent(input: { id: string; userId: number; prompt?: string; body?: string | null; imageUrl?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(contentDrafts).set({
+    ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
+    ...(input.body !== undefined ? { body: input.body } : {}),
+    ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+  }).where(and(eq(contentDrafts.id, input.id), eq(contentDrafts.userId, input.userId)));
+  return getDraftForUser(input.id, input.userId);
+}
+
+export async function addDraftRevision(input: { draftId: string; instruction: string; body?: string | null; imageUrl?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.insert(draftRevisions).values({ id: nanoid(), ...input });
+}
+
+export async function listRevisions(draftId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(draftRevisions).where(eq(draftRevisions.draftId, draftId)).orderBy(desc(draftRevisions.createdAt));
+}
+
+export async function publishDraft(id: string, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const draft = await getDraftForUser(id, userId);
+  if (!draft) return undefined;
+  const publicSlug = draft.publicSlug ?? nanoid(16);
+  if (!draft.publicSlug) await db.update(contentDrafts).set({ publicSlug }).where(and(eq(contentDrafts.id, id), eq(contentDrafts.userId, userId)));
+  return publicSlug;
+}
+
+export function maskVoucherCode(rawCode: string) {
+  const cleaned = rawCode.replace(/\s/g, "");
+  return `•••• ${cleaned.slice(-4)}`;
+}
+
+export async function createVoucherAttempt(input: {
+  userId: number;
+  plan: "weekly" | "monthly";
+  voucherBrand: "kazang" | "oneforyou" | "blue" | "ott";
+  rawVoucherCode: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const amountCents = input.plan === "weekly" ? 5000 : 15000;
+  const maskedVoucherCode = maskVoucherCode(input.rawVoucherCode);
+  const id = nanoid();
+  await db.insert(voucherRedemptionAttempts).values({
+    id,
+    userId: input.userId,
+    plan: input.plan,
+    voucherBrand: input.voucherBrand,
+    maskedVoucherCode,
+    amountCents,
+    status: "pending",
+  });
+  const result = await db.select().from(voucherRedemptionAttempts).where(eq(voucherRedemptionAttempts.id, id)).limit(1);
+  return result[0];
+}
+
+export async function listVoucherAttemptsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(voucherRedemptionAttempts).where(eq(voucherRedemptionAttempts.userId, userId)).orderBy(desc(voucherRedemptionAttempts.createdAt));
+}
