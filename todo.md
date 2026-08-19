@@ -38,3 +38,6 @@
 - [x] Remove the obsolete voucher checkout controls from the customer interface and replace the CSS hiding workaround with explicit PayShap-first rendering.
 - [x] Validate the configured and missing-merchant PayShap instruction states, status-history wiring, and pending-only access safeguards with automated coverage and authenticated presentation checks.
 - [x] Add an email/password sign-up, OTP verification, and sign-in dialog that uses the new server authentication procedures.
+- [x] Normalize database timestamp values before calculating rolling generation allowance resets.
+- [x] Return a stable non-undefined deletion-status query result when no privacy request exists.
+- [x] Add regression tests for timestamp normalization and empty privacy status responses.

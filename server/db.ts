@@ -18,12 +18,20 @@ import { sendTransactionalEmail } from "./sendgrid";
 
 const FREE_GENERATION_LIMIT = 5;
 
-export function calculateUsageAllowance(input: { used: number; oldestGenerationAt?: Date | null; now?: Date; unlimited?: boolean; plan?: "weekly" | "monthly" }) {
+export function normalizeDatabaseTimestamp(value: Date | string | null | undefined) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function calculateUsageAllowance(input: { used: number; oldestGenerationAt?: Date | string | null; now?: Date; unlimited?: boolean; plan?: "weekly" | "monthly" }) {
   if (input.unlimited) {
     return { unlimited: true, limit: null, used: 0, remaining: null, resetsAt: null, plan: input.plan ?? "weekly" };
   }
   const now = input.now ?? new Date();
-  const resetAt = input.oldestGenerationAt ? new Date(input.oldestGenerationAt.getTime() + 24 * 60 * 60 * 1000) : now;
+  const oldestGenerationAt = normalizeDatabaseTimestamp(input.oldestGenerationAt);
+  const resetAt = oldestGenerationAt ? new Date(oldestGenerationAt.getTime() + 24 * 60 * 60 * 1000) : now;
   return { unlimited: false, limit: FREE_GENERATION_LIMIT, used: input.used, remaining: Math.max(0, FREE_GENERATION_LIMIT - input.used), resetsAt: resetAt, plan: "free" as const };
 }
 
@@ -261,9 +269,9 @@ export async function requestAccountDeletion(userId: number) {
 
 export async function getAccountDeletionRequestForUser(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const [request] = await db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.userId, userId)).orderBy(desc(accountDeletionRequests.requestedAt)).limit(1);
-  return request;
+  return request ?? null;
 }
 
 export async function listOpenAccountDeletionRequests() {

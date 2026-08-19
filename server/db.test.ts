@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateUsageAllowance, createPayShapReference, generationEligibility, maskVoucherCode } from "./db";
+import { calculateUsageAllowance, createPayShapReference, generationEligibility, maskVoucherCode, normalizeDatabaseTimestamp } from "./db";
 
 describe("privacy-safe voucher handling", () => {
   it("masks all but the final four voucher characters", () => {
@@ -25,6 +25,16 @@ describe("rolling generation allowance", () => {
 
   it("marks active passes as unlimited without exposing a free cap", () => {
     expect(calculateUsageAllowance({ used: 5, unlimited: true, plan: "monthly" })).toMatchObject({ unlimited: true, remaining: null, plan: "monthly" });
+  });
+
+  it("accepts MySQL string timestamps when calculating the rolling reset", () => {
+    const allowance = calculateUsageAllowance({
+      used: 1,
+      oldestGenerationAt: "2026-08-19T12:00:00.000Z",
+      now: new Date("2026-08-19T13:00:00.000Z"),
+    });
+    expect(allowance.resetsAt).toEqual(new Date("2026-08-20T12:00:00.000Z"));
+    expect(normalizeDatabaseTimestamp("not-a-date")).toBeNull();
   });
 });
 
