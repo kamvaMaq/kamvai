@@ -2,11 +2,13 @@ import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
+  accountDeletionRequests,
   contentDrafts,
   draftRevisions,
   entitlements,
   generationUsages,
   InsertUser,
+  payShapPaymentRequests,
   userPreferences,
   users,
   voucherRedemptionAttempts,
@@ -198,6 +200,95 @@ export async function publishDraft(id: string, userId: number) {
 export function maskVoucherCode(rawCode: string) {
   const cleaned = rawCode.replace(/\s/g, "");
   return `•••• ${cleaned.slice(-4)}`;
+}
+
+export function createPayShapReference() {
+  return `KAM-${nanoid(10).toUpperCase()}`;
+}
+
+export async function createPayShapPaymentRequest(input: { userId: number; plan: "weekly" | "monthly" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const amountCents = input.plan === "weekly" ? 5000 : 15000;
+  const id = nanoid();
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  await db.insert(payShapPaymentRequests).values({
+    id,
+    userId: input.userId,
+    plan: input.plan,
+    paymentReference: createPayShapReference(),
+    amountCents,
+    expiresAt,
+  });
+  const [request] = await db.select().from(payShapPaymentRequests).where(eq(payShapPaymentRequests.id, id)).limit(1);
+  return request;
+}
+
+export async function listPayShapRequestsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payShapPaymentRequests).where(eq(payShapPaymentRequests.userId, userId)).orderBy(desc(payShapPaymentRequests.createdAt));
+}
+
+export async function requestAccountDeletion(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [existing] = await db.select().from(accountDeletionRequests).where(and(eq(accountDeletionRequests.userId, userId), eq(accountDeletionRequests.status, "pending"))).orderBy(desc(accountDeletionRequests.requestedAt)).limit(1);
+  if (existing) return existing;
+  const id = nanoid();
+  await db.insert(accountDeletionRequests).values({ id, userId });
+  const [request] = await db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.id, id)).limit(1);
+  return request;
+}
+
+export async function getAccountDeletionRequestForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [request] = await db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.userId, userId)).orderBy(desc(accountDeletionRequests.requestedAt)).limit(1);
+  return request;
+}
+
+export async function listOpenAccountDeletionRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.status, "pending")).orderBy(desc(accountDeletionRequests.requestedAt));
+}
+
+export async function resolveAccountDeletionRequest(input: { requestId: string; adminUserId: number; outcome: "in_review" | "completed" | "declined"; note?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [request] = await db.select().from(accountDeletionRequests).where(eq(accountDeletionRequests.id, input.requestId)).limit(1);
+  if (!request) throw new Error("Deletion request not found.");
+  if (request.status === "completed" || request.status === "declined") throw new Error("This deletion request has already been resolved.");
+  const resolvedAt = input.outcome === "in_review" ? null : new Date();
+  await db.update(accountDeletionRequests).set({ status: input.outcome, resolvedAt, resolvedByUserId: input.adminUserId, resolutionNote: input.note?.trim() || null }).where(eq(accountDeletionRequests.id, input.requestId));
+  return { ...request, status: input.outcome, resolvedAt, resolvedByUserId: input.adminUserId, resolutionNote: input.note?.trim() || null };
+}
+
+export async function listOpenPayShapRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payShapPaymentRequests).where(eq(payShapPaymentRequests.status, "pending")).orderBy(desc(payShapPaymentRequests.createdAt));
+}
+
+export async function reconcilePayShapRequest(input: { requestId: string; adminUserId: number; outcome: "confirmed" | "rejected"; note?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [request] = await db.select().from(payShapPaymentRequests).where(eq(payShapPaymentRequests.id, input.requestId)).limit(1);
+  if (!request) throw new Error("Payment request not found.");
+  if (request.status !== "pending") throw new Error("Only pending payment requests can be reconciled.");
+  if (request.expiresAt < new Date()) {
+    await db.update(payShapPaymentRequests).set({ status: "expired" }).where(eq(payShapPaymentRequests.id, request.id));
+    throw new Error("This payment request has expired.");
+  }
+  const reconciledAt = new Date();
+  await db.update(payShapPaymentRequests).set({ status: input.outcome, reconciledAt, reconciledByUserId: input.adminUserId, reconciliationNote: input.note?.trim() || null }).where(and(eq(payShapPaymentRequests.id, request.id), eq(payShapPaymentRequests.status, "pending")));
+  if (input.outcome === "confirmed") {
+    const duration = request.plan === "weekly" ? 7 : 30;
+    const expiresAt = new Date(reconciledAt.getTime() + duration * 24 * 60 * 60 * 1000);
+    await db.insert(entitlements).values({ id: nanoid(), userId: request.userId, plan: request.plan, status: "active", startedAt: reconciledAt, expiresAt, provider: "payshap_manual", providerReference: request.paymentReference });
+  }
+  return { ...request, status: input.outcome, reconciledAt, reconciledByUserId: input.adminUserId, reconciliationNote: input.note?.trim() || null };
 }
 
 export async function createVoucherAttempt(input: {

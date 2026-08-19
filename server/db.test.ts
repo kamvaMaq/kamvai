@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateUsageAllowance, generationEligibility, maskVoucherCode } from "./db";
+import { calculateUsageAllowance, createPayShapReference, generationEligibility, maskVoucherCode } from "./db";
 
 describe("privacy-safe voucher handling", () => {
   it("masks all but the final four voucher characters", () => {
@@ -35,5 +35,13 @@ describe("privacy-aware generation eligibility", () => {
 
   it("blocks a free user when the rolling allowance is exhausted", () => {
     expect(generationEligibility({ privacyConsentAt: new Date(), allowance: { unlimited: false, remaining: 0 } })).toEqual({ allowed: false, reason: "allowance_exhausted" });
+  });
+});
+
+describe("manual PayShap request references", () => {
+  it("generates concise, non-sequential references suitable for payment reconciliation", () => {
+    const reference = createPayShapReference();
+    expect(reference).toMatch(/^KAM-[A-Z0-9_-]{10}$/);
+    expect(createPayShapReference()).not.toBe(reference);
   });
 });

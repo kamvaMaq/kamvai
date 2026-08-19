@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createVoucherAttempt, listVoucherAttemptsForUser } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { createPayShapPaymentRequest, createVoucherAttempt, listOpenPayShapRequests, listPayShapRequestsForUser, listVoucherAttemptsForUser, reconcilePayShapRequest } from "../db";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 
 const planSchema = z.enum(["weekly", "monthly"]);
 const voucherSchema = z.enum(["kazang", "oneforyou", "blue", "ott"]);
@@ -11,6 +11,19 @@ export const paymentsRouter = router({
     { id: "monthly", name: "Monthly pass", priceZar: 150, days: 30 },
   ])),
   attempts: protectedProcedure.query(({ ctx }) => listVoucherAttemptsForUser(ctx.user.id)),
+  payShapRequests: protectedProcedure.query(({ ctx }) => listPayShapRequestsForUser(ctx.user.id)),
+  requestPayShap: protectedProcedure.input(z.object({ plan: planSchema })).mutation(async ({ ctx, input }) => {
+    const request = await createPayShapPaymentRequest({ userId: ctx.user.id, plan: input.plan });
+    return {
+      request,
+      paymentInstructionsConfigured: Boolean(process.env.PAYSHAP_SHAP_ID && process.env.PAYSHAP_RECIPIENT_NAME),
+      recipientName: process.env.PAYSHAP_RECIPIENT_NAME ?? null,
+      shapId: process.env.PAYSHAP_SHAP_ID ?? null,
+      message: "Your request is pending until Kamvai confirms the matching PayShap payment. A payment reference never unlocks access by itself.",
+    };
+  }),
+  adminOpenPayShapRequests: adminProcedure.query(() => listOpenPayShapRequests()),
+  reconcilePayShap: adminProcedure.input(z.object({ requestId: z.string().min(1), outcome: z.enum(["confirmed", "rejected"]), note: z.string().max(280).optional() })).mutation(({ ctx, input }) => reconcilePayShapRequest({ ...input, adminUserId: ctx.user.id })),
   redeemVoucher: protectedProcedure.input(z.object({
     plan: planSchema,
     voucherBrand: voucherSchema,

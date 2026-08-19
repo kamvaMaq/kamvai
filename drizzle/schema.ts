@@ -91,6 +91,67 @@ export const voucherRedemptionAttempts = mysqlTable("voucher_redemption_attempts
   userIdCreatedAt: index("voucher_redemptions_user_created_idx").on(table.userId, table.createdAt),
 }));
 
+export const emailAuthAccounts = mysqlTable("email_auth_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  userIdIndex: uniqueIndex("email_auth_accounts_user_id_idx").on(table.userId),
+}));
+
+export const emailOtpChallenges = mysqlTable("email_otp_challenges", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  purpose: mysqlEnum("purpose", ["signup", "login"]).notNull(),
+  codeHash: varchar("codeHash", { length: 128 }).notNull(),
+  firstName: varchar("firstName", { length: 120 }),
+  pendingPasswordHash: varchar("pendingPasswordHash", { length: 255 }),
+  attempts: int("attempts").default(0).notNull(),
+  status: mysqlEnum("status", ["pending", "verified", "cancelled"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  emailCreatedAt: index("email_otp_challenges_email_created_idx").on(table.email, table.createdAt),
+}));
+
+export const payShapPaymentRequests = mysqlTable("payshap_payment_requests", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  plan: mysqlEnum("plan", ["weekly", "monthly"]).notNull(),
+  paymentReference: varchar("paymentReference", { length: 40 }).notNull().unique(),
+  amountCents: int("amountCents").notNull(),
+  status: mysqlEnum("status", ["pending", "confirmed", "rejected", "expired"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  reconciledAt: timestamp("reconciledAt"),
+  reconciledByUserId: int("reconciledByUserId"),
+  reconciliationNote: varchar("reconciliationNote", { length: 280 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  userIdCreatedAt: index("payshap_requests_user_created_idx").on(table.userId, table.createdAt),
+  statusCreatedAt: index("payshap_requests_status_created_idx").on(table.status, table.createdAt),
+}));
+
+export const accountDeletionRequests = mysqlTable("account_deletion_requests", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  status: mysqlEnum("status", ["pending", "in_review", "completed", "declined"]).default("pending").notNull(),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  resolvedAt: timestamp("resolvedAt"),
+  resolvedByUserId: int("resolvedByUserId"),
+  resolutionNote: varchar("resolutionNote", { length: 280 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  userIdCreatedAt: index("account_deletion_requests_user_created_idx").on(table.userId, table.createdAt),
+  statusRequestedAt: index("account_deletion_requests_status_requested_idx").on(table.status, table.requestedAt),
+}));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type ContentDraft = typeof contentDrafts.$inferSelect;

@@ -19,12 +19,22 @@
 - [x] Add Vitest coverage for usage limits, masking behavior, privacy controls, and core server procedures.
 - [x] Validate the build, database migration, tests, and desktop/mobile presentation before delivery.
 - [ ] Activate real Google OAuth once a Google client ID and secret are supplied.
-- [ ] Activate SendGrid email/password, OTP verification, and transactional mail once a verified sender domain, template IDs, and SendGrid API key are supplied.
+- [x] Activate SendGrid OTP verification email with the configured verified sender, template, and API credential.
+- [ ] Add receipt and account-notification transactional email templates and delivery flows before production launch.
 - [ ] Select and activate one licensed payment provider after confirming its current support for the required voucher brands and receiving merchant credentials.
-- [ ] Add an operational POPIA account-deletion flow and final policy/legal review before production launch.
+- [x] Add an operational account-deletion request and administrator-review flow; final policy/legal review remains required before production launch.
 - [x] Add explicit workspace error states for drafts, preferences, allowance, and plan queries.
 - [x] Detect unsupported voice languages before recording and show a language-specific fallback.
 - [x] Extend social sharing to generated image outputs with a safe public image preview route.
 - [x] Display voucher-redemption attempt history and provider configuration status in the workspace.
 - [x] Add Vitest coverage for privacy consent eligibility and protected payment/draft/preference procedures.
 - [ ] Run and record interactive smoke checks for core client actions before delivery.
+- [x] Configure the SendGrid OTP adapter with the supplied sender address, verification-template variables, verified sender status checks, and the supplied template ID.
+- [x] Research and present low-friction payment alternatives that do not require immediate voucher-aggregator onboarding.
+- [x] Replace the voucher-only checkout interface with the user-selected interim payment method while retaining masked voucher support as a future option.
+- [x] Add manual PayShap request records with unique references, payer instructions, expiry, and pending status.
+- [x] Add administrator-only reconciliation controls that can confirm or reject a PayShap request and create an entitlement only on confirmation.
+- [x] Add customer-facing PayShap instructions and payment-status history without exposing sensitive bank account information beyond configured payment details.
+- [x] Remove the obsolete voucher checkout controls from the customer interface and replace the CSS hiding workaround with explicit PayShap-first rendering.
+- [ ] Validate the authenticated PayShap request, missing-merchant-details, and status-history flows before delivery.
+- [x] Add an email/password sign-up, OTP verification, and sign-in dialog that uses the new server authentication procedures.
