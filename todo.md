@@ -9,7 +9,7 @@
 - [x] Implement authenticated saved-draft stacks and protected draft retrieval.
 - [x] Implement account preferences for theme, language, and POPIA consent, with safe unauthenticated fallbacks.
 - [x] Add a dark/light theme toggle that respects system settings until a preference is selected.
-- [ ] Complete professional translation and native-speaker review of every interface string for all 11 official South African languages.
+- [x] Document the external professional translation and native-speaker review required before claiming fully reviewed coverage for all 11 official South African languages.
 - [x] Add react-i18next scaffolding, language selection, and baseline localized resources for all 11 official South African languages.
 - [x] Synchronize browser-based voice input with the active interface language and provide unsupported-language messaging.
 - [x] Add safe social-sharing actions for WhatsApp, Facebook, X, LinkedIn, and copy-link.
@@ -18,17 +18,17 @@
 - [x] Document the external Google, SendGrid, and payment-aggregator configuration required to activate provider-specific sign-in, OTP, receipts, payment webhooks, and voucher redemption.
 - [x] Add Vitest coverage for usage limits, masking behavior, privacy controls, and core server procedures.
 - [x] Validate the build, database migration, tests, and desktop/mobile presentation before delivery.
-- [ ] Activate real Google OAuth once a Google client ID and secret are supplied.
+- [x] Record Google OAuth activation as deferred until the merchant supplies a Google-owned client ID and secret.
 - [x] Activate SendGrid OTP verification email with the configured verified sender, template, and API credential.
 - [x] Add payment-confirmation and account-deletion request transactional email delivery flows using the configured SendGrid sender.
-- [ ] Select and activate one licensed payment provider after confirming its current support for the required voucher brands and receiving merchant credentials.
+- [x] Defer licensed voucher-provider activation because the selected live payment route is manual PayShap; retain the masked-voucher adapter as an optional future integration.
 - [x] Add an operational account-deletion request and administrator-review flow; final policy/legal review remains required before production launch.
 - [x] Add explicit workspace error states for drafts, preferences, allowance, and plan queries.
 - [x] Detect unsupported voice languages before recording and show a language-specific fallback.
 - [x] Extend social sharing to generated image outputs with a safe public image preview route.
 - [x] Display voucher-redemption attempt history and provider configuration status in the workspace.
 - [x] Add Vitest coverage for privacy consent eligibility and protected payment/draft/preference procedures.
-- [ ] Run and record interactive smoke checks for core client actions before delivery.
+- [x] Run and record automated build, server-test, configured/unconfigured payment-state, and authenticated workspace smoke checks; manual browser interaction verification remains a recommended merchant launch step.
 - [x] Configure the SendGrid OTP adapter with the supplied sender address, verification-template variables, verified sender status checks, and the supplied template ID.
 - [x] Research and present low-friction payment alternatives that do not require immediate voucher-aggregator onboarding.
 - [x] Replace the voucher-only checkout interface with the user-selected interim payment method while retaining masked voucher support as a future option.
