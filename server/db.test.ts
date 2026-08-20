@@ -15,7 +15,7 @@ describe("rolling generation allowance", () => {
   it("enforces the free limit and resets 24 hours after the oldest counted generation", () => {
     const oldest = new Date("2026-08-19T08:00:00.000Z");
     const status = calculateUsageAllowance({
-      used: 5,
+      used: 10,
       oldestGenerationAt: oldest,
       now: new Date("2026-08-19T12:00:00.000Z"),
     });
@@ -24,7 +24,11 @@ describe("rolling generation allowance", () => {
   });
 
   it("marks active passes as unlimited without exposing a free cap", () => {
-    expect(calculateUsageAllowance({ used: 5, unlimited: true, plan: "monthly" })).toMatchObject({ unlimited: true, remaining: null, plan: "monthly" });
+    expect(calculateUsageAllowance({ used: 10, unlimited: true, plan: "monthly" })).toMatchObject({ unlimited: true, remaining: null, plan: "monthly" });
+  });
+
+  it("keeps one free generation available after nine rolling-window generations", () => {
+    expect(calculateUsageAllowance({ used: 9, now: new Date("2026-08-19T12:00:00.000Z") })).toMatchObject({ limit: 10, remaining: 1 });
   });
 
   it("accepts MySQL string timestamps when calculating the rolling reset", () => {
@@ -40,7 +44,7 @@ describe("rolling generation allowance", () => {
 
 describe("privacy-aware generation eligibility", () => {
   it("requires explicit privacy consent before server-side generation", () => {
-    expect(generationEligibility({ privacyConsentAt: null, allowance: { unlimited: false, remaining: 5 } })).toEqual({ allowed: false, reason: "privacy_consent_required" });
+    expect(generationEligibility({ privacyConsentAt: null, allowance: { unlimited: false, remaining: 10 } })).toEqual({ allowed: false, reason: "privacy_consent_required" });
   });
 
   it("blocks a free user when the rolling allowance is exhausted", () => {

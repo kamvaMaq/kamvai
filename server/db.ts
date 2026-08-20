@@ -16,7 +16,7 @@ import {
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
 
-const FREE_GENERATION_LIMIT = 5;
+const FREE_GENERATION_LIMIT = 10;
 
 export function normalizeDatabaseTimestamp(value: Date | string | null | undefined) {
   if (!value) return null;

@@ -11,7 +11,7 @@ Kamvai provides an authenticated creation workspace that lets a user describe th
 | Area | Included capabilities |
 |---|---|
 | **AI workspace** | Blog, email, code, and image generation; iterative refinement; draft saving and revision history. |
-| **Access control** | Server-side rolling 24-hour free allowance; active weekly/monthly entitlements bypass the free cap. |
+| **Access control** | Server-side rolling 24-hour free allowance of **10 generations**; active weekly/monthly entitlements bypass the free cap. |
 | **Payments** | Manual PayShap requests with an expiring, non-sequential payment reference; administrator-only reconciliation; pending-only access until confirmation. |
 | **Identity** | Existing secure single sign-on plus email/password registration, hashed OTP verification, and email/password sign-in. |
 | **Email** | SendGrid OTP delivery, PayShap payment-confirmation email, and account-deletion request acknowledgement. |

@@ -42,3 +42,5 @@
 - [x] Return a stable non-undefined deletion-status query result when no privacy request exists.
 - [x] Add regression tests for timestamp normalization and empty privacy status responses.
 - [x] Create a comprehensive README covering Kamvai setup, architecture, operation, validation, and launch prerequisites.
+- [x] Increase the server-enforced free generation allowance from 5 to 10 per rolling 24-hour period and update regression coverage.
+- [x] Add a bottom-of-workspace POPIA privacy and data-rights notice with a direct deletion-request path.
