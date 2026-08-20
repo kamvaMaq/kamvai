@@ -1,6 +1,6 @@
 import { normalizeDatabaseTimestamp } from "./db";
 
-export const contributionKinds = ["blog", "email", "code", "image"] as const;
+export const contributionKinds = ["blog", "email", "code", "image", "chat", "video"] as const;
 export type ContributionKind = (typeof contributionKinds)[number];
 export type ContributionRecord = { kind: ContributionKind; createdAt: Date | string | null };
 export const DEFAULT_WEEKLY_GENERATION_GOAL = 5;

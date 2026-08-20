@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const testState = vi.hoisted(() => {
   const mutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, data: undefined };
   const query = { data: undefined, isLoading: false, isError: false, refetch: vi.fn() };
-  const drafts: Array<{ id: string; title: string; kind: "blog"; updatedAt: Date; body: string; language: string; prompt: string }> = [];
+  const drafts: Array<{ id: string; title: string; kind: "blog" | "chat" | "video"; updatedAt: Date; body: string; language: string; prompt: string }> = [];
   const utils = new Proxy({}, { get: (_target, property) => property === "invalidate" || property === "fetch" ? vi.fn() : utils });
   const trpc = new Proxy({ useUtils: () => utils }, { get: (_target, namespace) => namespace === "useUtils" ? () => utils : new Proxy({}, { get: (_router, procedure) => ({ useQuery: () => namespace === "drafts" && procedure === "list" ? { ...query, data: drafts } : query, useMutation: () => mutation }) }) });
   return { trpc, promptOpen: vi.fn(), drafts };
@@ -80,7 +80,7 @@ describe("focused workspace navigation", () => {
     expect(screen.queryByRole("button", { name: /Saved campaign/ })).toBeNull();
     expect(screen.queryByText("draftNotSelected")).toBeNull();
 
-    const brief = screen.getByPlaceholderText("briefPlaceholder");
+    const brief = screen.getByLabelText("What can Kamvai help with?");
     fireEvent.change(brief, { target: { value: "An unfinished brief" } });
     fireEvent.click(screen.getByRole("button", { name: "newDraft" }));
     expect((brief as HTMLTextAreaElement).value).toBe("");
@@ -104,5 +104,33 @@ describe("focused workspace navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Library" }));
     fireEvent.click(screen.getByRole("button", { name: "New draft" }));
     expect(screen.queryByText("Mobile saved result")).toBeNull();
+  });
+
+  it("offers a general-purpose chat by default and makes the video plan workflow explicit", () => {
+    render(createElement(Home));
+
+    expect(screen.getByRole("button", { name: /General chat/ })).toBeTruthy();
+    expect(screen.getByLabelText("What can Kamvai help with?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ask Kamvai" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Video plan/ }));
+    expect(screen.getByText("Video planning workspace")).toBeTruthy();
+    expect(screen.getByText(/does not render a video file/i)).toBeTruthy();
+    expect(screen.getByLabelText("What video would you like to make?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create video plan" })).toBeTruthy();
+  });
+
+  it("keeps general chat and video planning modes reachable at desktop and mobile viewports", () => {
+    for (const width of [375, 1280]) {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+      window.dispatchEvent(new Event("resize"));
+      const { unmount } = render(createElement(Home));
+
+      expect(screen.getByRole("button", { name: /General chat/ })).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: /Video plan/ }));
+      expect(screen.getByLabelText("What video would you like to make?")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Create video plan" })).toBeTruthy();
+      unmount();
+    }
   });
 });

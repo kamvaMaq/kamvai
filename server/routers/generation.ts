@@ -15,7 +15,8 @@ import {
 } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 
-const kindSchema = z.enum(["blog", "email", "code", "image"]);
+const kindSchema = z.enum(["blog", "email", "code", "image", "chat", "video"]);
+export type GenerationKind = z.infer<typeof kindSchema>;
 const languageNames: Record<string, string> = {
   en: "English", af: "Afrikaans", zu: "isiZulu", xh: "isiXhosa", nso: "Sepedi", tn: "Setswana", st: "Sesotho", ts: "Xitsonga", ss: "siSwati", ve: "Tshivenda", nr: "isiNdebele",
 };
@@ -23,6 +24,12 @@ const languageNames: Record<string, string> = {
 function createTitle(brief: string, kind: string) {
   const clean = brief.replace(/\s+/g, " ").trim();
   return clean.length > 68 ? `${clean.slice(0, 65)}…` : clean || `${kind} draft`;
+}
+
+export function createGenerationSystemPrompt(kind: GenerationKind, targetLanguage: string) {
+  if (kind === "chat") return `You are Kamvai, a thoughtful and practical conversational assistant for South African users. Answer the user's question or help with their request directly and clearly. Return polished Markdown only. Write entirely in ${targetLanguage}. Be helpful without inventing sources, personal experiences, or capabilities you do not have.`;
+  if (kind === "video") return `You are a creative video producer for South African users. Turn the user's brief into a production-ready video plan. Return polished Markdown only and write entirely in ${targetLanguage}. Include a concise creative direction, recommended format and duration, a voiceover or dialogue script, a shot-by-shot plan, visual and sound guidance, and a ready-to-use prompt for a video-generation tool. Do not claim to have rendered a video file; this mode produces a practical video plan.`;
+  return `You write clear, useful ${kind} content for South African users. Return polished Markdown only. Write entirely in ${targetLanguage}. Respect the requested format, be specific, and do not fabricate sources or personal experiences.`;
 }
 
 export const generationRouter = router({
@@ -64,10 +71,11 @@ export const generationRouter = router({
       const catalog = await listLLMModels();
       const model = catalog.data.find(entry => entry.id === "claude-sonnet-4-6")?.id
         ?? catalog.data.find(entry => entry.id.startsWith("claude-"))?.id;
+      const systemPrompt = createGenerationSystemPrompt(input.kind, targetLanguage);
       const response = await invokeLLM({
         model,
         messages: [
-          { role: "system", content: `You write clear, useful ${input.kind} content for South African users. Return polished Markdown only. Write entirely in ${targetLanguage}. Respect the requested format, be specific, and do not fabricate sources or personal experiences.` },
+          { role: "system", content: systemPrompt },
           { role: "user", content: `Brief: ${input.brief}${stackInstruction}${refinement}${priorDraft}` },
         ],
       });

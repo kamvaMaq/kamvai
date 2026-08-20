@@ -1,0 +1,2 @@
+ALTER TABLE `content_drafts` MODIFY COLUMN `kind` enum('blog','email','code','image','chat','video') NOT NULL;--> statement-breakpoint
+ALTER TABLE `generation_usages` MODIFY COLUMN `kind` enum('blog','email','code','image','chat','video') NOT NULL;

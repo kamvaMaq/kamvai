@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, CalendarDays, Check, Code2, Flame, Image, Mail, PenLine, Sparkles, Target } from "lucide-react";
+import { BarChart3, CalendarDays, Check, Code2, Flame, Image, Mail, MessageCircle, PenLine, Sparkles, Target, Video } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ const kindVisual = {
   email: { label: "Email", icon: Mail, tone: "bg-[#F8EEDD] text-[#9A5D28]" },
   code: { label: "Code", icon: Code2, tone: "bg-[#E9EDF7] text-[#415B8A]" },
   image: { label: "Image", icon: Image, tone: "bg-[#F3E9F4] text-[#85528C]" },
+  chat: { label: "Chat", icon: MessageCircle, tone: "bg-[#E8F1EE] text-[#244F49]" },
+  video: { label: "Video", icon: Video, tone: "bg-[#FFF0DF] text-[#A65B26]" },
 } as const;
 
 export function ContributionAnalytics() {

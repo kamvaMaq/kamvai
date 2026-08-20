@@ -376,7 +376,7 @@ export async function getGenerationAllowance(userId: number) {
   return calculateUsageAllowance({ used: Number(row?.count ?? 0), oldestGenerationAt: row?.oldest, now });
 }
 
-export async function recordGenerationUsage(userId: number, kind: "blog" | "email" | "code" | "image") {
+export async function recordGenerationUsage(userId: number, kind: "blog" | "email" | "code" | "image" | "chat" | "video") {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   await db.insert(generationUsages).values({ userId, kind });
@@ -420,7 +420,7 @@ export async function getPublicDraft(publicSlug: string) {
 
 export async function createDraft(input: {
   userId: number;
-  kind: "blog" | "email" | "code" | "image";
+  kind: "blog" | "email" | "code" | "image" | "chat" | "video";
   title: string;
   prompt: string;
   language: string;

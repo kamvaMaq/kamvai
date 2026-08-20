@@ -108,7 +108,7 @@ export const documentUploadEvents = mysqlTable("document_upload_events", {
 export const contentDrafts = mysqlTable("content_drafts", {
   id: varchar("id", { length: 32 }).primaryKey(),
   userId: int("userId").notNull(),
-  kind: mysqlEnum("kind", ["blog", "email", "code", "image"]).notNull(),
+  kind: mysqlEnum("kind", ["blog", "email", "code", "image", "chat", "video"]).notNull(),
   title: varchar("title", { length: 160 }).notNull(),
   prompt: text("prompt").notNull(),
   language: varchar("language", { length: 32 }).default("en").notNull(),
@@ -135,7 +135,7 @@ export const draftRevisions = mysqlTable("draft_revisions", {
 export const generationUsages = mysqlTable("generation_usages", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  kind: mysqlEnum("kind", ["blog", "email", "code", "image"]).notNull(),
+  kind: mysqlEnum("kind", ["blog", "email", "code", "image", "chat", "video"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => ({
   userIdCreatedAt: index("generation_usages_user_created_idx").on(table.userId, table.createdAt),
