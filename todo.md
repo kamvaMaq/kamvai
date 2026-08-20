@@ -103,3 +103,6 @@
 - [x] Move the Document Workspace from the dashboard into the generator input section.
 - [x] Add an accessible plus-sign attachment action beside the prompt field with upload allowance feedback.
 - [x] Add regression coverage for opening the inline attachment workspace and preserving the upload controls.
+- [x] Add prompt-area file chips that display the user’s currently stored attached documents.
+- [x] Add accessible drag-and-drop uploads to the Document Workspace dialog while preserving file picker support.
+- [x] Add regression coverage for attachment chips and drag-and-drop file selection behavior.
