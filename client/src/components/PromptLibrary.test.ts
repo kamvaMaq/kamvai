@@ -13,9 +13,11 @@ const prompt = vi.hoisted(() => ({
   kind: "email" as const,
   body: "Draft a concise follow-up email for [AUDIENCE].",
   locale: "en",
+  tags: [],
   isBuiltIn: false,
   isFavorite: false,
   isOwned: true,
+  shareSlug: null,
 }));
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" } }) }));
@@ -29,6 +31,9 @@ vi.mock("@/lib/trpc", () => ({
       create: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       update: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       remove: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      setTags: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      share: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      revokeShare: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
   },
 }));

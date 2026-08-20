@@ -75,3 +75,8 @@
 - [x] Add a direct “Use this prompt” action to My Prompts cards.
 - [x] Add regression coverage for applying a custom prompt from My Prompts.
 - [x] Add a component-level regression test that applies an owned custom prompt from the My Prompts tab.
+- [x] Add private reusable tags to custom My Prompts templates, with tag filtering.
+- [x] Add owner-controlled public share links for custom prompt templates with safe public retrieval.
+- [x] Add My Prompts UI controls for managing tags, filtering by tag, and copying or revoking share links.
+- [x] Add regression coverage for tag isolation, tag filtering, share-link authorization, and link revocation.
+- [x] Add explicit database regression coverage that rejects non-owner creation and revocation of custom-prompt share links.

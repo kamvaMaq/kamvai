@@ -6,11 +6,13 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./i18n";
 import Home from "./pages/Home";
+import SharedPrompt from "./pages/SharedPrompt";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/prompt/:slug" component={SharedPrompt} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

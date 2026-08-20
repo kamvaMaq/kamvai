@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
@@ -10,7 +10,9 @@ import {
   InsertUser,
   payShapPaymentRequests,
   promptLibraryFavorites,
+  promptLibraryItemTags,
   promptLibraryItems,
+  promptLibraryTags,
   userPreferences,
   users,
   voucherRedemptionAttempts,
@@ -99,7 +101,7 @@ export async function seedPromptLibrary() {
   }))).onDuplicateKeyUpdate({ set: { isBuiltIn: true } });
 }
 
-export async function listPromptLibrary(userId: number, input: { query?: string; kind?: PromptKind; locale?: PromptLocale; favoritesOnly?: boolean } = {}) {
+export async function listPromptLibrary(userId: number, input: { query?: string; kind?: PromptKind; locale?: PromptLocale; favoritesOnly?: boolean; tag?: string } = {}) {
   const db = await getDb();
   if (!db) return [];
   await seedPromptLibrary();
@@ -110,6 +112,7 @@ export async function listPromptLibrary(userId: number, input: { query?: string;
     kind: promptLibraryItems.kind,
     category: promptLibraryItems.category,
     locale: promptLibraryItems.locale,
+    publicSlug: promptLibraryItems.publicSlug,
     isBuiltIn: promptLibraryItems.isBuiltIn,
     createdByUserId: promptLibraryItems.createdByUserId,
     favoriteId: promptLibraryFavorites.id,
@@ -121,11 +124,19 @@ export async function listPromptLibrary(userId: number, input: { query?: string;
     eq(promptLibraryItems.createdByUserId, userId),
   )).orderBy(desc(promptLibraryItems.isBuiltIn), desc(promptLibraryItems.createdAt));
   const query = input.query?.trim().toLocaleLowerCase() ?? "";
+  const ownedPromptIds = rows.filter(prompt => prompt.createdByUserId === userId).map(prompt => prompt.id);
+  const tagsByPrompt = new Map<string, string[]>();
+  if (ownedPromptIds.length) {
+    const tags = await db.select({ promptId: promptLibraryItemTags.promptId, name: promptLibraryTags.name }).from(promptLibraryItemTags).innerJoin(promptLibraryTags, eq(promptLibraryItemTags.tagId, promptLibraryTags.id)).where(and(inArray(promptLibraryItemTags.promptId, ownedPromptIds), eq(promptLibraryTags.userId, userId)));
+    for (const tag of tags) tagsByPrompt.set(tag.promptId, [...(tagsByPrompt.get(tag.promptId) ?? []), tag.name]);
+  }
+  const selectedTag = input.tag?.trim().toLocaleLowerCase();
   return rows.filter(prompt => {
     const matchesKind = !input.kind || prompt.kind === input.kind;
     const haystack = `${prompt.title} ${prompt.body} ${prompt.category}`.toLocaleLowerCase();
-    return matchesKind && (!input.favoritesOnly || Boolean(prompt.favoriteId)) && (!query || haystack.includes(query));
-  }).map(({ favoriteId, createdByUserId, ...prompt }) => ({ ...prompt, isFavorite: Boolean(favoriteId), isOwned: createdByUserId === userId }));
+    const tags = tagsByPrompt.get(prompt.id) ?? [];
+    return matchesKind && (!input.favoritesOnly || Boolean(prompt.favoriteId)) && (!selectedTag || tags.includes(selectedTag)) && (!query || haystack.includes(query));
+  }).map(({ favoriteId, createdByUserId, publicSlug, ...prompt }) => ({ ...prompt, tags: tagsByPrompt.get(prompt.id) ?? [], isFavorite: Boolean(favoriteId), isOwned: createdByUserId === userId, shareSlug: createdByUserId === userId ? publicSlug : null }));
 }
 
 export async function togglePromptLibraryFavorite(userId: number, promptId: string) {
@@ -168,8 +179,54 @@ export async function deleteUserPrompt(userId: number, promptId: string) {
   const [existing] = await db.select({ id: promptLibraryItems.id }).from(promptLibraryItems).where(and(eq(promptLibraryItems.id, promptId), eq(promptLibraryItems.createdByUserId, userId), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
   if (!existing) throw new Error("That custom prompt is not available for removal.");
   await db.delete(promptLibraryFavorites).where(eq(promptLibraryFavorites.promptId, promptId));
+  await db.delete(promptLibraryItemTags).where(eq(promptLibraryItemTags.promptId, promptId));
   await db.delete(promptLibraryItems).where(eq(promptLibraryItems.id, promptId));
   return { success: true } as const;
+}
+
+function normalizePromptTags(tags: string[]) {
+  return Array.from(new Set(tags.map(tag => tag.trim().replace(/\s+/g, " ").toLocaleLowerCase()).filter(tag => tag.length >= 2 && tag.length <= 32))).slice(0, 8);
+}
+
+async function requireOwnedCustomPrompt(userId: number, promptId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Prompt Library is temporarily unavailable.");
+  const [prompt] = await db.select({ id: promptLibraryItems.id, publicSlug: promptLibraryItems.publicSlug }).from(promptLibraryItems).where(and(eq(promptLibraryItems.id, promptId), eq(promptLibraryItems.createdByUserId, userId), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
+  if (!prompt) throw new Error("That custom prompt is not available to you.");
+  return { db, prompt };
+}
+
+export async function setUserPromptTags(userId: number, promptId: string, tags: string[]) {
+  const { db } = await requireOwnedCustomPrompt(userId, promptId);
+  const names = normalizePromptTags(tags);
+  await db.delete(promptLibraryItemTags).where(eq(promptLibraryItemTags.promptId, promptId));
+  for (const name of names) {
+    const [existing] = await db.select({ id: promptLibraryTags.id }).from(promptLibraryTags).where(and(eq(promptLibraryTags.userId, userId), eq(promptLibraryTags.name, name))).limit(1);
+    const tagId = existing?.id ?? nanoid();
+    if (!existing) await db.insert(promptLibraryTags).values({ id: tagId, userId, name });
+    await db.insert(promptLibraryItemTags).values({ id: nanoid(), promptId, tagId }).onDuplicateKeyUpdate({ set: { promptId } });
+  }
+  return { tags: names };
+}
+
+export async function shareUserPrompt(userId: number, promptId: string) {
+  const { db, prompt } = await requireOwnedCustomPrompt(userId, promptId);
+  const slug = prompt.publicSlug ?? nanoid(16);
+  if (!prompt.publicSlug) await db.update(promptLibraryItems).set({ publicSlug: slug }).where(eq(promptLibraryItems.id, promptId));
+  return { slug };
+}
+
+export async function revokeUserPromptShare(userId: number, promptId: string) {
+  const { db } = await requireOwnedCustomPrompt(userId, promptId);
+  await db.update(promptLibraryItems).set({ publicSlug: null }).where(eq(promptLibraryItems.id, promptId));
+  return { success: true } as const;
+}
+
+export async function getPublicPrompt(publicSlug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [prompt] = await db.select({ title: promptLibraryItems.title, body: promptLibraryItems.body, kind: promptLibraryItems.kind, category: promptLibraryItems.category }).from(promptLibraryItems).where(and(eq(promptLibraryItems.publicSlug, publicSlug), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
+  return prompt ?? null;
 }
 
 export async function getUserById(userId: number) {

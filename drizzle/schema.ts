@@ -43,6 +43,7 @@ export const promptLibraryItems = mysqlTable("prompt_library_items", {
   kind: mysqlEnum("kind", ["blog", "email", "code", "image"]).notNull(),
   category: varchar("category", { length: 64 }).notNull(),
   locale: varchar("locale", { length: 8 }).default("en").notNull(),
+  publicSlug: varchar("publicSlug", { length: 40 }).unique(),
   isBuiltIn: boolean("isBuiltIn").default(false).notNull(),
   createdByUserId: int("createdByUserId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -51,6 +52,27 @@ export const promptLibraryItems = mysqlTable("prompt_library_items", {
   visibilityCreatedAt: index("prompt_library_items_visibility_created_idx").on(table.isBuiltIn, table.createdAt),
   visibilityLocaleCreatedAt: index("prompt_library_items_visibility_locale_created_idx").on(table.isBuiltIn, table.locale, table.createdAt),
   creatorCreatedAt: index("prompt_library_items_creator_created_idx").on(table.createdByUserId, table.createdAt),
+}));
+
+export const promptLibraryTags = mysqlTable("prompt_library_tags", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  userNameUnique: uniqueIndex("prompt_library_tags_user_name_idx").on(table.userId, table.name),
+  userCreatedAt: index("prompt_library_tags_user_created_idx").on(table.userId, table.createdAt),
+}));
+
+export const promptLibraryItemTags = mysqlTable("prompt_library_item_tags", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  promptId: varchar("promptId", { length: 32 }).notNull(),
+  tagId: varchar("tagId", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  promptTagUnique: uniqueIndex("prompt_library_item_tags_prompt_tag_idx").on(table.promptId, table.tagId),
+  promptCreatedAt: index("prompt_library_item_tags_prompt_created_idx").on(table.promptId, table.createdAt),
+  tagCreatedAt: index("prompt_library_item_tags_tag_created_idx").on(table.tagId, table.createdAt),
 }));
 
 export const contentDrafts = mysqlTable("content_drafts", {

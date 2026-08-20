@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { users } from "../drizzle/schema";
-import { createUserPrompt, deleteUserPrompt, getDb, listPromptLibrary, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
+import { createUserPrompt, deleteUserPrompt, getDb, getPublicPrompt, listPromptLibrary, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
 
 describe("Prompt Library database integration", () => {
   it("seeds searchable prompts and persists a favourite only for the active user", async () => {
@@ -52,6 +52,16 @@ describe("Prompt Library database integration", () => {
     try {
       const library = await listPromptLibrary(user.id, { query: "Campaign callout" });
       expect(library.find(prompt => prompt.id === created.id)).toMatchObject({ isOwned: true, title: "Campaign callout" });
+      await expect(setUserPromptTags(user.id, created.id, ["Sales", "Launch", "sales"])).resolves.toEqual({ tags: ["sales", "launch"] });
+      const taggedLibrary = await listPromptLibrary(user.id, { tag: "sales" });
+      expect(taggedLibrary.find(prompt => prompt.id === created.id)?.tags).toEqual(expect.arrayContaining(["sales", "launch"]));
+      await expect(setUserPromptTags(user.id + 1_000_000, created.id, ["private"])).rejects.toThrow("not available to you");
+      await expect(shareUserPrompt(user.id + 1_000_000, created.id)).rejects.toThrow("not available to you");
+      await expect(revokeUserPromptShare(user.id + 1_000_000, created.id)).rejects.toThrow("not available to you");
+      const shared = await shareUserPrompt(user.id, created.id);
+      await expect(getPublicPrompt(shared.slug)).resolves.toMatchObject({ title: "Campaign callout", kind: "email" });
+      await expect(revokeUserPromptShare(user.id, created.id)).resolves.toEqual({ success: true });
+      await expect(getPublicPrompt(shared.slug)).resolves.toBeNull();
       await expect(updateUserPrompt(user.id, created.id, { title: "Campaign follow-up", category: "Marketing", kind: "email", body: "Draft a concise follow-up email for [AUDIENCE]." })).resolves.toMatchObject({ title: "Campaign follow-up" });
       await expect(updateUserPrompt(user.id + 1_000_000, created.id, { title: "Not allowed", category: "Marketing", kind: "email", body: "This cannot be saved by another user." })).rejects.toThrow("not available for editing");
       await expect(deleteUserPrompt(user.id + 1_000_000, created.id)).rejects.toThrow("not available for removal");

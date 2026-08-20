@@ -4,7 +4,11 @@ import type { TrpcContext } from "../_core/context";
 const database = vi.hoisted(() => ({
   createUserPrompt: vi.fn(),
   deleteUserPrompt: vi.fn(),
+  getPublicPrompt: vi.fn(),
   listPromptLibrary: vi.fn(),
+  revokeUserPromptShare: vi.fn(),
+  setUserPromptTags: vi.fn(),
+  shareUserPrompt: vi.fn(),
   togglePromptLibraryFavorite: vi.fn(),
   updateUserPrompt: vi.fn(),
 }));
@@ -26,6 +30,9 @@ describe("protected Prompt Library router", () => {
     database.togglePromptLibraryFavorite.mockResolvedValue({ isFavorite: true });
     database.updateUserPrompt.mockResolvedValue({ id: "custom", title: "Updated" });
     database.deleteUserPrompt.mockResolvedValue({ success: true });
+    database.setUserPromptTags.mockResolvedValue({ tags: ["sales"] });
+    database.shareUserPrompt.mockResolvedValue({ slug: "shared-prompt-link" });
+    database.revokeUserPromptShare.mockResolvedValue({ success: true });
   });
 
   it("passes trimmed search, locale, kind, and favourites filters to the private library helper", async () => {
@@ -51,5 +58,15 @@ describe("protected Prompt Library router", () => {
     expect(database.updateUserPrompt).toHaveBeenCalledWith(42, "custom-prompt", data);
     await caller.remove({ promptId: "custom-prompt" });
     expect(database.deleteUserPrompt).toHaveBeenCalledWith(42, "custom-prompt");
+  });
+
+  it("passes tag and share-link changes through the authenticated owner context", async () => {
+    const caller = promptLibraryRouter.createCaller(authenticatedContext);
+    await caller.setTags({ promptId: "custom-prompt", tags: ["sales", "launch"] });
+    expect(database.setUserPromptTags).toHaveBeenCalledWith(42, "custom-prompt", ["sales", "launch"]);
+    await caller.share({ promptId: "custom-prompt" });
+    expect(database.shareUserPrompt).toHaveBeenCalledWith(42, "custom-prompt");
+    await caller.revokeShare({ promptId: "custom-prompt" });
+    expect(database.revokeUserPromptShare).toHaveBeenCalledWith(42, "custom-prompt");
   });
 });
