@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
@@ -243,6 +243,24 @@ export async function getUserPromptShareAnalytics(userId: number, promptId: stri
   const { db } = await requireOwnedCustomPrompt(userId, promptId);
   const [result] = await db.select({ views: sql<number>`count(*)` }).from(promptLibraryShareViews).where(eq(promptLibraryShareViews.promptId, promptId));
   return { views: Number(result?.views ?? 0) };
+}
+
+export async function getUserSharedPromptLeaderboard(userId: number, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  const views = sql<number>`count(${promptLibraryShareViews.id})`;
+  const rows = await db.select({
+    id: promptLibraryItems.id,
+    title: promptLibraryItems.title,
+    category: promptLibraryItems.category,
+    kind: promptLibraryItems.kind,
+    views,
+  }).from(promptLibraryItems).innerJoin(promptLibraryShareViews, eq(promptLibraryShareViews.promptId, promptLibraryItems.id)).where(and(
+    eq(promptLibraryItems.createdByUserId, userId),
+    eq(promptLibraryItems.isBuiltIn, false),
+    isNotNull(promptLibraryItems.publicSlug),
+  )).groupBy(promptLibraryItems.id, promptLibraryItems.title, promptLibraryItems.category, promptLibraryItems.kind).orderBy(desc(views), asc(promptLibraryItems.title)).limit(limit);
+  return rows.map(row => ({ ...row, views: Number(row.views) }));
 }
 
 export async function getUserById(userId: number) {

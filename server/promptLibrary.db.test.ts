@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { users } from "../drizzle/schema";
-import { createUserPrompt, deleteUserPrompt, getDb, getPublicPrompt, getUserPromptShareAnalytics, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
+import { createUserPrompt, deleteUserPrompt, getDb, getPublicPrompt, getUserPromptShareAnalytics, getUserSharedPromptLeaderboard, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
 
 describe("Prompt Library database integration", () => {
   it("seeds searchable prompts and persists a favourite only for the active user", async () => {
@@ -74,6 +74,31 @@ describe("Prompt Library database integration", () => {
     } finally {
       const remaining = await listPromptLibrary(user.id, { query: "Campaign" });
       if (remaining.some(prompt => prompt.id === created.id)) await deleteUserPrompt(user.id, created.id);
+    }
+  });
+
+  it("ranks only the owner’s active shared prompts with anonymous views", async () => {
+    const db = await getDb();
+    if (!db) return;
+    const [user] = await db.select({ id: users.id }).from(users).limit(1);
+    if (!user) return;
+
+    const top = await createUserPrompt(user.id, { title: "Top shared template", category: "Marketing", kind: "email", body: "Write a focused email for [AUDIENCE]." });
+    const second = await createUserPrompt(user.id, { title: "Second shared template", category: "Business", kind: "blog", body: "Write a concise blog article about [TOPIC]." });
+    const zero = await createUserPrompt(user.id, { title: "Zero view template", category: "Business", kind: "email", body: "Write a helpful follow-up for [AUDIENCE]." });
+    try {
+      await Promise.all([shareUserPrompt(user.id, top.id), shareUserPrompt(user.id, second.id), shareUserPrompt(user.id, zero.id)]);
+      await recordPublicPromptView(top.id);
+      await recordPublicPromptView(top.id);
+      await recordPublicPromptView(top.id);
+      await recordPublicPromptView(second.id);
+
+      const leaderboard = await getUserSharedPromptLeaderboard(user.id, 5);
+      const ranking = leaderboard.filter(prompt => [top.id, second.id, zero.id].includes(prompt.id));
+      expect(ranking).toEqual([{ id: top.id, title: "Top shared template", category: "Marketing", kind: "email", views: 3 }, { id: second.id, title: "Second shared template", category: "Business", kind: "blog", views: 1 }]);
+      await expect(getUserSharedPromptLeaderboard(user.id + 1_000_000, 5)).resolves.toEqual([]);
+    } finally {
+      await Promise.all([deleteUserPrompt(user.id, top.id), deleteUserPrompt(user.id, second.id), deleteUserPrompt(user.id, zero.id)]);
     }
   });
 });

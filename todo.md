@@ -85,3 +85,9 @@
 - [x] Display basic view counts in My Prompts share management controls.
 - [x] Add regression coverage for view recording, owner-only analytics, and revoked-link view protection.
 - [x] Add component-level regression coverage for the My Prompts anonymous view-counter display.
+- [x] Add a protected owner-only leaderboard that ranks shared custom prompts by anonymous view count.
+- [x] Add a responsive dashboard section showing the owner’s most-viewed shared prompts.
+- [x] Add regression coverage for ranking order, zero-view exclusions, and owner isolation.
+- [x] Add an explicit empty state for users with no shared-prompt views yet.
+- [x] Add a retryable error state for failed shared-prompt leaderboard queries.
+- [x] Add component coverage for leaderboard empty and error states.

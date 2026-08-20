@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createUserPrompt, deleteUserPrompt, getPublicPrompt, getUserPromptShareAnalytics, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "../db";
+import { createUserPrompt, deleteUserPrompt, getPublicPrompt, getUserPromptShareAnalytics, getUserSharedPromptLeaderboard, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "../db";
 import { promptKinds, promptLocales } from "../promptLibrary";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -34,6 +34,7 @@ export const promptLibraryRouter = router({
   share: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).mutation(async ({ ctx, input }) => shareUserPrompt(ctx.user.id, input.promptId)),
   revokeShare: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).mutation(async ({ ctx, input }) => revokeUserPromptShare(ctx.user.id, input.promptId)),
   shareAnalytics: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).query(({ ctx, input }) => getUserPromptShareAnalytics(ctx.user.id, input.promptId)),
+  sharedLeaderboard: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(10).optional() }).optional()).query(({ ctx, input }) => getUserSharedPromptLeaderboard(ctx.user.id, input?.limit ?? 5)),
   public: publicProcedure.input(z.object({ slug: z.string().min(8).max(40) })).query(async ({ input }) => {
     const prompt = await getPublicPrompt(input.slug);
     if (!prompt) return null;

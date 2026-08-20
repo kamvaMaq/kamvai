@@ -6,6 +6,7 @@ const database = vi.hoisted(() => ({
   deleteUserPrompt: vi.fn(),
   getPublicPrompt: vi.fn(),
   getUserPromptShareAnalytics: vi.fn(),
+  getUserSharedPromptLeaderboard: vi.fn(),
   listPromptLibrary: vi.fn(),
   revokeUserPromptShare: vi.fn(),
   recordPublicPromptView: vi.fn(),
@@ -36,6 +37,7 @@ describe("protected Prompt Library router", () => {
     database.shareUserPrompt.mockResolvedValue({ slug: "shared-prompt-link" });
     database.revokeUserPromptShare.mockResolvedValue({ success: true });
     database.getUserPromptShareAnalytics.mockResolvedValue({ views: 4 });
+    database.getUserSharedPromptLeaderboard.mockResolvedValue([]);
     database.recordPublicPromptView.mockResolvedValue(undefined);
   });
 
@@ -86,5 +88,11 @@ describe("protected Prompt Library router", () => {
     database.getPublicPrompt.mockResolvedValueOnce({ id: "custom-prompt", title: "Shared", body: "Prompt body", kind: "email", category: "Marketing" });
     await expect(caller.public({ slug: "active-share-link" })).resolves.toEqual({ title: "Shared", body: "Prompt body", kind: "email", category: "Marketing" });
     expect(database.recordPublicPromptView).toHaveBeenCalledWith("custom-prompt");
+  });
+
+  it("retrieves the shared-prompt ranking only through the authenticated owner context", async () => {
+    const caller = promptLibraryRouter.createCaller(authenticatedContext);
+    await caller.sharedLeaderboard({ limit: 3 });
+    expect(database.getUserSharedPromptLeaderboard).toHaveBeenCalledWith(42, 3);
   });
 });
