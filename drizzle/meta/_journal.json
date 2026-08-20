@@ -43,6 +43,13 @@
       "when": 1787174520083,
       "tag": "0005_daily_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1787219014173,
+      "tag": "0006_sharp_mephistopheles",
+      "breakpoints": true
     }
   ]
 }

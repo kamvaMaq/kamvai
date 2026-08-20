@@ -52,3 +52,8 @@
 - [x] Add a protected contribution analytics query with current-week and current-month generation totals, content mix, and activity trend data.
 - [x] Add a responsive personal analytics representation for weekly/monthly user usage and contribution insights.
 - [x] Add regression coverage for contribution analytics aggregation and period boundaries.
+- [x] Add a persisted personal weekly generation-goal preference with a sensible bounded range.
+- [x] Add editable weekly-goal controls and visual progress tracking to the contribution dashboard.
+- [x] Add regression coverage for weekly-goal validation and progress calculation.
+- [x] Add visible success and error feedback for weekly-goal saves in the contribution dashboard.
+- [x] Add router-level regression coverage that rejects weekly goals outside the allowed 1–100 range.

@@ -1,0 +1,1 @@
+ALTER TABLE `user_preferences` ADD `weeklyGenerationGoal` int DEFAULT 5 NOT NULL;

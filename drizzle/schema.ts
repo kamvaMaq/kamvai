@@ -17,6 +17,7 @@ export const userPreferences = mysqlTable("user_preferences", {
   userId: int("userId").notNull(),
   theme: mysqlEnum("theme", ["system", "light", "dark"]).default("system").notNull(),
   locale: varchar("locale", { length: 16 }).default("en").notNull(),
+  weeklyGenerationGoal: int("weeklyGenerationGoal").default(5).notNull(),
   privacyConsentVersion: varchar("privacyConsentVersion", { length: 32 }),
   privacyConsentAt: timestamp("privacyConsentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

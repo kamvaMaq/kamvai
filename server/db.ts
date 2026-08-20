@@ -15,7 +15,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
-import { contributionAnalyticsStart, summarizeContributionAnalytics } from "./contributionAnalytics";
+import { contributionAnalyticsStart, DEFAULT_WEEKLY_GENERATION_GOAL, summarizeContributionAnalytics } from "./contributionAnalytics";
 
 const FREE_GENERATION_LIMIT = 10;
 
@@ -90,14 +90,14 @@ export async function getUserById(userId: number) {
 
 export async function getPreferencesForUser(userId: number) {
   const db = await getDb();
-  if (!db) return { theme: "system" as const, locale: "en", privacyConsentAt: null, privacyConsentVersion: null };
+  if (!db) return { theme: "system" as const, locale: "en", weeklyGenerationGoal: DEFAULT_WEEKLY_GENERATION_GOAL, privacyConsentAt: null, privacyConsentVersion: null };
   const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
-  return result[0] ?? { theme: "system" as const, locale: "en", privacyConsentAt: null, privacyConsentVersion: null };
+  return result[0] ?? { theme: "system" as const, locale: "en", weeklyGenerationGoal: DEFAULT_WEEKLY_GENERATION_GOAL, privacyConsentAt: null, privacyConsentVersion: null };
 }
 
 export async function updatePreferencesForUser(
   userId: number,
-  data: { theme?: "system" | "light" | "dark"; locale?: string; acceptPrivacy?: boolean },
+  data: { theme?: "system" | "light" | "dark"; locale?: string; weeklyGenerationGoal?: number; acceptPrivacy?: boolean },
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -106,6 +106,7 @@ export async function updatePreferencesForUser(
     userId,
     theme: data.theme ?? "system",
     locale: data.locale ?? "en",
+    weeklyGenerationGoal: data.weeklyGenerationGoal ?? DEFAULT_WEEKLY_GENERATION_GOAL,
     privacyConsentVersion: data.acceptPrivacy ? "2026-08" : null,
     privacyConsentAt: data.acceptPrivacy ? now : null,
   };
@@ -113,6 +114,7 @@ export async function updatePreferencesForUser(
     set: {
       ...(data.theme ? { theme: data.theme } : {}),
       ...(data.locale ? { locale: data.locale } : {}),
+      ...(data.weeklyGenerationGoal !== undefined ? { weeklyGenerationGoal: data.weeklyGenerationGoal } : {}),
       ...(data.acceptPrivacy ? { privacyConsentVersion: "2026-08", privacyConsentAt: now } : {}),
     },
   });
@@ -154,7 +156,8 @@ export async function getContributionAnalytics(userId: number) {
     eq(generationUsages.userId, userId),
     gte(generationUsages.createdAt, periodStart),
   ));
-  return summarizeContributionAnalytics(records, now);
+  const [preferences] = await db.select({ weeklyGenerationGoal: userPreferences.weeklyGenerationGoal }).from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return summarizeContributionAnalytics(records, now, preferences?.weeklyGenerationGoal ?? DEFAULT_WEEKLY_GENERATION_GOAL);
 }
 
 export async function listDraftsForUser(userId: number) {

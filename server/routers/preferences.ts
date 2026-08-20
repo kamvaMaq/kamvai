@@ -7,6 +7,7 @@ export const preferencesRouter = router({
   save: protectedProcedure.input(z.object({
     theme: z.enum(["system", "light", "dark"]).optional(),
     locale: z.string().min(2).max(16).optional(),
+    weeklyGenerationGoal: z.number().int().min(1).max(100).optional(),
     acceptPrivacy: z.boolean().optional(),
   })).mutation(({ ctx, input }) => updatePreferencesForUser(ctx.user.id, input)),
 });

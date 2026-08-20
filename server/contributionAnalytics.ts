@@ -3,6 +3,12 @@ import { normalizeDatabaseTimestamp } from "./db";
 export const contributionKinds = ["blog", "email", "code", "image"] as const;
 export type ContributionKind = (typeof contributionKinds)[number];
 export type ContributionRecord = { kind: ContributionKind; createdAt: Date | string | null };
+export const DEFAULT_WEEKLY_GENERATION_GOAL = 5;
+
+export function calculateWeeklyGoalProgress(weekTotal: number, weeklyGoal = DEFAULT_WEEKLY_GENERATION_GOAL) {
+  const goal = Math.max(1, Math.min(100, Math.round(weeklyGoal)));
+  return { goal, completed: weekTotal, percent: Math.min(100, Math.round((weekTotal / goal) * 100)), reached: weekTotal >= goal };
+}
 
 function startOfUtcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -25,7 +31,7 @@ export function contributionAnalyticsStart(now = new Date()) {
   return weekStart < monthStart ? weekStart : monthStart;
 }
 
-export function summarizeContributionAnalytics(records: ContributionRecord[], now = new Date()) {
+export function summarizeContributionAnalytics(records: ContributionRecord[], now = new Date(), weeklyGoal = DEFAULT_WEEKLY_GENERATION_GOAL) {
   const weekStart = startOfUtcWeek(now);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const trendStart = new Date(weekStart);
@@ -56,6 +62,7 @@ export function summarizeContributionAnalytics(records: ContributionRecord[], no
   });
   const contentMix = contributionKinds.map(kind => ({ kind, count: byKind.get(kind) ?? 0 }));
   const mostUsed = contentMix.reduce((best, item) => item.count > best.count ? item : best, contentMix[0]);
+  const goalProgress = calculateWeeklyGoalProgress(weekTotal, weeklyGoal);
 
   return {
     weekTotal,
@@ -64,6 +71,8 @@ export function summarizeContributionAnalytics(records: ContributionRecord[], no
     weekTrend,
     contentMix,
     mostUsedKind: mostUsed?.count ? mostUsed.kind : null,
+    weeklyGoal: goalProgress.goal,
+    goalProgress,
     generatedSince: monthStart,
   };
 }

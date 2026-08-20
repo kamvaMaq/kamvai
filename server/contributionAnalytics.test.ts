@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contributionAnalyticsStart, summarizeContributionAnalytics } from "./contributionAnalytics";
+import { calculateWeeklyGoalProgress, contributionAnalyticsStart, summarizeContributionAnalytics } from "./contributionAnalytics";
 
 describe("contribution analytics", () => {
   const now = new Date("2026-08-20T12:00:00.000Z");
@@ -26,5 +26,11 @@ describe("contribution analytics", () => {
 
   it("includes the overlapping weekly period when a month starts midweek", () => {
     expect(contributionAnalyticsStart(new Date("2026-08-02T12:00:00.000Z")).toISOString()).toBe("2026-07-27T00:00:00.000Z");
+  });
+
+  it("bounds a weekly goal and calculates progress without exceeding 100 percent", () => {
+    expect(calculateWeeklyGoalProgress(3, 5)).toEqual({ goal: 5, completed: 3, percent: 60, reached: false });
+    expect(calculateWeeklyGoalProgress(11, 5)).toEqual({ goal: 5, completed: 11, percent: 100, reached: true });
+    expect(calculateWeeklyGoalProgress(0, 0).goal).toBe(1);
   });
 });
