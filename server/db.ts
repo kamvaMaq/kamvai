@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import {
   accountDeletionRequests,
   contentDrafts,
+  documentUploadEvents,
   draftRevisions,
   entitlements,
   generationUsages,
@@ -15,6 +16,7 @@ import {
   promptLibraryShareViews,
   promptLibraryTags,
   userPreferences,
+  uploadedDocuments,
   users,
   voucherRedemptionAttempts,
 } from "../drizzle/schema";
@@ -24,6 +26,8 @@ import { contributionAnalyticsStart, contributionStreakStart, DEFAULT_WEEKLY_GEN
 import { type PromptKind, type PromptLocale, promptTemplates } from "./promptLibrary";
 
 const FREE_GENERATION_LIMIT = 10;
+const DOCUMENT_UPLOAD_LIMIT = 3;
+const DOCUMENT_UPLOAD_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export function normalizeDatabaseTimestamp(value: Date | string | null | undefined) {
   if (!value) return null;
@@ -40,6 +44,17 @@ export function calculateUsageAllowance(input: { used: number; oldestGenerationA
   const oldestGenerationAt = normalizeDatabaseTimestamp(input.oldestGenerationAt);
   const resetAt = oldestGenerationAt ? new Date(oldestGenerationAt.getTime() + 24 * 60 * 60 * 1000) : now;
   return { unlimited: false, limit: FREE_GENERATION_LIMIT, used: input.used, remaining: Math.max(0, FREE_GENERATION_LIMIT - input.used), resetsAt: resetAt, plan: "free" as const };
+}
+
+export function calculateDocumentUploadAllowance(input: { used: number; oldestUploadAt?: Date | string | null; now?: Date }) {
+  const now = input.now ?? new Date();
+  const oldestUploadAt = normalizeDatabaseTimestamp(input.oldestUploadAt);
+  return {
+    limit: DOCUMENT_UPLOAD_LIMIT,
+    used: input.used,
+    remaining: Math.max(0, DOCUMENT_UPLOAD_LIMIT - input.used),
+    resetsAt: oldestUploadAt ? new Date(oldestUploadAt.getTime() + DOCUMENT_UPLOAD_WINDOW_MS) : now,
+  };
 }
 
 export function generationEligibility(input: { privacyConsentAt?: Date | null; allowance: { unlimited: boolean; remaining: number | null } }) {
@@ -85,6 +100,45 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getDocumentUploadAllowance(userId: number, now = new Date()) {
+  const db = await getDb();
+  if (!db) return calculateDocumentUploadAllowance({ used: 0, now });
+  const cutoff = new Date(now.getTime() - DOCUMENT_UPLOAD_WINDOW_MS);
+  const events = await db.select({ createdAt: documentUploadEvents.createdAt }).from(documentUploadEvents).where(and(eq(documentUploadEvents.userId, userId), gte(documentUploadEvents.createdAt, cutoff))).orderBy(documentUploadEvents.createdAt);
+  return calculateDocumentUploadAllowance({ used: events.length, oldestUploadAt: events[0]?.createdAt, now });
+}
+
+export async function listUserDocuments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: uploadedDocuments.id, fileName: uploadedDocuments.fileName, mimeType: uploadedDocuments.mimeType, sizeBytes: uploadedDocuments.sizeBytes, createdAt: uploadedDocuments.createdAt }).from(uploadedDocuments).where(eq(uploadedDocuments.userId, userId)).orderBy(desc(uploadedDocuments.createdAt));
+}
+
+export async function createUploadedDocument(userId: number, input: { fileName: string; mimeType: string; sizeBytes: number; storageKey: string; storageUrl: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Document storage is temporarily unavailable.");
+  const id = nanoid();
+  await db.insert(uploadedDocuments).values({ id, userId, ...input });
+  await db.insert(documentUploadEvents).values({ id: nanoid(), userId, documentId: id });
+  return { id, fileName: input.fileName, mimeType: input.mimeType, sizeBytes: input.sizeBytes, createdAt: new Date() };
+}
+
+export async function getUserDocument(userId: number, documentId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [document] = await db.select().from(uploadedDocuments).where(and(eq(uploadedDocuments.id, documentId), eq(uploadedDocuments.userId, userId))).limit(1);
+  return document ?? null;
+}
+
+export async function removeUserDocument(userId: number, documentId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Document storage is temporarily unavailable.");
+  const document = await getUserDocument(userId, documentId);
+  if (!document) throw new Error("That document is not available to you.");
+  await db.delete(uploadedDocuments).where(eq(uploadedDocuments.id, documentId));
+  return { success: true } as const;
 }
 
 export async function seedPromptLibrary() {

@@ -83,6 +83,28 @@ export const promptLibraryShareViews = mysqlTable("prompt_library_share_views", 
   promptViewedAt: index("prompt_library_share_views_prompt_viewed_idx").on(table.promptId, table.viewedAt),
 }));
 
+export const uploadedDocuments = mysqlTable("uploaded_documents", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  fileName: varchar("fileName", { length: 180 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  sizeBytes: int("sizeBytes").notNull(),
+  storageKey: varchar("storageKey", { length: 320 }).notNull(),
+  storageUrl: text("storageUrl").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  userCreatedAt: index("uploaded_documents_user_created_idx").on(table.userId, table.createdAt),
+}));
+
+export const documentUploadEvents = mysqlTable("document_upload_events", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  documentId: varchar("documentId", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  userCreatedAt: index("document_upload_events_user_created_idx").on(table.userId, table.createdAt),
+}));
+
 export const contentDrafts = mysqlTable("content_drafts", {
   id: varchar("id", { length: 32 }).primaryKey(),
   userId: int("userId").notNull(),

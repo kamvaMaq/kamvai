@@ -11,6 +11,7 @@ import { privacyRouter } from "./routers/privacy";
 import { usageRouter } from "./routers/usage";
 import { analyticsRouter } from "./routers/analytics";
 import { promptLibraryRouter } from "./routers/promptLibrary";
+import { documentsRouter } from "./routers/documents";
 
 export const appRouter = router({
   system: systemRouter,
@@ -28,6 +29,7 @@ export const appRouter = router({
   usage: usageRouter,
   analytics: analyticsRouter,
   promptLibrary: promptLibraryRouter,
+  documents: documentsRouter,
   drafts: draftsRouter,
   generation: generationRouter,
   payments: paymentsRouter,

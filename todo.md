@@ -91,3 +91,12 @@
 - [x] Add an explicit empty state for users with no shared-prompt views yet.
 - [x] Add a retryable error state for failed shared-prompt leaderboard queries.
 - [x] Add component coverage for leaderboard empty and error states.
+- [x] Add private document-upload records for PDFs, Word files, and images stored through the managed object store.
+- [x] Enforce a server-side rolling 24-hour allowance of three document uploads per user.
+- [x] Add protected upload, listing, and removal procedures with strict file-type and size validation.
+- [x] Add a responsive workspace uploader showing attached files and remaining daily uploads.
+- [x] Add regression coverage for permitted types, rolling upload allowance, and user ownership isolation.
+- [x] Verify DOCX uploads contain expected OOXML document entries rather than accepting generic ZIP files.
+- [x] Add permitted Word and image upload regression coverage.
+- [x] Add explicit non-owner document download and removal rejection coverage.
+- [x] Add regression coverage that rejects a generic ZIP disguised as a DOCX file.

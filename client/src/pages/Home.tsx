@@ -17,6 +17,7 @@ import { downloadCodeExport } from "../lib/codeZip";
 import { ContributionAnalytics } from "../components/ContributionAnalytics";
 import { PromptLibrary } from "../components/PromptLibrary";
 import { SharedPromptLeaderboard } from "../components/SharedPromptLeaderboard";
+import { DocumentUploader } from "../components/DocumentUploader";
 
 type ContentKind = "blog" | "email" | "code" | "image";
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
@@ -214,6 +215,7 @@ export default function Home() {
           </div>
           {isAuthenticated && <ContributionAnalytics />}
           {isAuthenticated && <SharedPromptLeaderboard />}
+          {isAuthenticated && <DocumentUploader />}
 
           <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-border/80 bg-card shadow-[0_22px_70px_rgba(46,41,30,.06)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#B36935]">{activeDraft?.kind === "image" ? "Generated image" : t("draftStack")}</p><h2 className="mt-1 font-display text-2xl tracking-tight">{activeDraft?.title ?? t("draftNotSelected")}</h2></div>{activeDraft && <div className="flex gap-1">{activeDraft.kind === "code" && activeDraft.body && <Button size="sm" variant="outline" className="rounded-full" onClick={downloadCodeZip}><Archive size={15} />Download ZIP</Button>}<Button size="icon" variant="ghost" className="rounded-full" onClick={() => share()}><Copy size={16} /></Button><Button size="icon" variant="ghost" className="rounded-full" onClick={() => share("WhatsApp")}><Share2 size={16} /></Button></div>}</div>
