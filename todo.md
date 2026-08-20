@@ -116,3 +116,9 @@
 - [x] Add a mobile-accessible Privacy & data entry to the focused workspace controls.
 - [x] Extend focused-workspace regression coverage for all explicit secondary-tool triggers across responsive layouts.
 - [x] Add interaction coverage for mobile Prompt Library, mobile Payments, and Sharing panel triggers in the focused workspace.
+- [x] Keep completed draft output out of the main canvas unless a past draft is explicitly selected from the library.
+- [x] Make New draft open a clean primary chat with cleared generation and refinement state.
+- [x] Make Your Library a collapsible sidebar control so past drafts appear only on demand.
+- [x] Add regression coverage for clean new-chat state, collapsible draft history, and explicit past-draft viewing.
+- [x] Add a mobile-accessible Your Library trigger for reopening saved drafts.
+- [x] Add responsive regression coverage that restores a saved draft from the mobile library and returns to a blank chat with New draft.

@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const testState = vi.hoisted(() => {
   const mutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, data: undefined };
   const query = { data: undefined, isLoading: false, isError: false, refetch: vi.fn() };
+  const drafts: Array<{ id: string; title: string; kind: "blog"; updatedAt: Date; body: string; language: string; prompt: string }> = [];
   const utils = new Proxy({}, { get: (_target, property) => property === "invalidate" || property === "fetch" ? vi.fn() : utils });
-  const procedure = { useQuery: () => query, useMutation: () => mutation };
-  const trpc = new Proxy({ useUtils: () => utils }, { get: (_target, property) => property === "useUtils" ? () => utils : new Proxy({}, { get: () => procedure }) });
-  return { trpc, promptOpen: vi.fn() };
+  const trpc = new Proxy({ useUtils: () => utils }, { get: (_target, namespace) => namespace === "useUtils" ? () => utils : new Proxy({}, { get: (_router, procedure) => ({ useQuery: () => namespace === "drafts" && procedure === "list" ? { ...query, data: drafts } : query, useMutation: () => mutation }) }) });
+  return { trpc, promptOpen: vi.fn(), drafts };
 });
 
 vi.mock("@/lib/trpc", () => ({ trpc: testState.trpc }));
@@ -30,7 +30,7 @@ vi.mock("../lib/codeZip", () => ({ downloadCodeExport: vi.fn() }));
 import Home from "./Home";
 
 describe("focused workspace navigation", () => {
-  beforeEach(() => testState.promptOpen.mockReset());
+  beforeEach(() => { cleanup(); testState.promptOpen.mockReset(); testState.drafts.splice(0); });
 
   it("opens deferred payment choices and continues into the PayShap request flow", () => {
     render(createElement(Home));
@@ -70,5 +70,39 @@ describe("focused workspace navigation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Payments" }));
     expect(screen.getByRole("heading", { name: "Payments & passes" })).toBeTruthy();
+  });
+
+  it("keeps past drafts collapsed until Your Library is opened and clears the main chat for New draft", () => {
+    testState.drafts.push({ id: "draft-1", title: "Saved campaign", kind: "blog", updatedAt: new Date("2026-08-20T00:00:00.000Z"), body: "A saved result", language: "en", prompt: "Campaign brief" });
+    render(createElement(Home));
+
+    expect(screen.getByRole("button", { name: "yourLibrary" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: /Saved campaign/ })).toBeNull();
+    expect(screen.queryByText("draftNotSelected")).toBeNull();
+
+    const brief = screen.getByPlaceholderText("briefPlaceholder");
+    fireEvent.change(brief, { target: { value: "An unfinished brief" } });
+    fireEvent.click(screen.getByRole("button", { name: "newDraft" }));
+    expect((brief as HTMLTextAreaElement).value).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "yourLibrary" }));
+    expect(screen.getByRole("button", { name: /Saved campaign/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Saved campaign/ }));
+    expect(screen.getByText("A saved result")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "yourLibrary" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("restores saved drafts from the mobile library and returns to a blank chat", () => {
+    testState.drafts.push({ id: "draft-mobile", title: "Mobile draft", kind: "blog", updatedAt: new Date("2026-08-20T00:00:00.000Z"), body: "Mobile saved result", language: "en", prompt: "Mobile brief" });
+    render(createElement(Home));
+
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    expect(screen.getByRole("heading", { name: "Your Library" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Mobile draft/ }));
+    expect(screen.getByText("Mobile saved result")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    fireEvent.click(screen.getByRole("button", { name: "New draft" }));
+    expect(screen.queryByText("Mobile saved result")).toBeNull();
   });
 });
