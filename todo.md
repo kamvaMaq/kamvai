@@ -41,3 +41,4 @@
 - [x] Normalize database timestamp values before calculating rolling generation allowance resets.
 - [x] Return a stable non-undefined deletion-status query result when no privacy request exists.
 - [x] Add regression tests for timestamp normalization and empty privacy status responses.
+- [x] Create a comprehensive README covering Kamvai setup, architecture, operation, validation, and launch prerequisites.
