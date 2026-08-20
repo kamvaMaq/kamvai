@@ -9,6 +9,7 @@ import { paymentsRouter } from "./routers/payments";
 import { preferencesRouter } from "./routers/preferences";
 import { privacyRouter } from "./routers/privacy";
 import { usageRouter } from "./routers/usage";
+import { analyticsRouter } from "./routers/analytics";
 
 export const appRouter = router({
   system: systemRouter,
@@ -24,6 +25,7 @@ export const appRouter = router({
   preferences: preferencesRouter,
   privacy: privacyRouter,
   usage: usageRouter,
+  analytics: analyticsRouter,
   drafts: draftsRouter,
   generation: generationRouter,
   payments: paymentsRouter,

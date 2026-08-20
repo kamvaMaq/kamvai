@@ -49,3 +49,6 @@
 - [x] Add a client-side ZIP download action for generated Code drafts with safe filenames and a clear export manifest.
 - [x] Add regression coverage for code ZIP export packaging.
 - [x] Create and validate a reusable Kamvai full-stack development skill based on the workflow used in this project.
+- [x] Add a protected contribution analytics query with current-week and current-month generation totals, content mix, and activity trend data.
+- [x] Add a responsive personal analytics representation for weekly/monthly user usage and contribution insights.
+- [x] Add regression coverage for contribution analytics aggregation and period boundaries.

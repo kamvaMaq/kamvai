@@ -15,6 +15,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
+import { contributionAnalyticsStart, summarizeContributionAnalytics } from "./contributionAnalytics";
 
 const FREE_GENERATION_LIMIT = 10;
 
@@ -142,6 +143,18 @@ export async function recordGenerationUsage(userId: number, kind: "blog" | "emai
   if (!db) throw new Error("Database unavailable");
   await db.insert(generationUsages).values({ userId, kind });
   return getGenerationAllowance(userId);
+}
+
+export async function getContributionAnalytics(userId: number) {
+  const db = await getDb();
+  if (!db) return summarizeContributionAnalytics([]);
+  const now = new Date();
+  const periodStart = contributionAnalyticsStart(now);
+  const records = await db.select({ kind: generationUsages.kind, createdAt: generationUsages.createdAt }).from(generationUsages).where(and(
+    eq(generationUsages.userId, userId),
+    gte(generationUsages.createdAt, periodStart),
+  ));
+  return summarizeContributionAnalytics(records, now);
 }
 
 export async function listDraftsForUser(userId: number) {
