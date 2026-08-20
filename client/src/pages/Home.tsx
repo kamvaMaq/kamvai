@@ -10,9 +10,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
-import { AlertCircle, Check, ChevronRight, Copy, Download, ImageIcon, Link2, Loader2, LockKeyhole, Mail, Mic, Moon, PanelLeft, Plus, Share2, Sparkles, Sun, WandSparkles, X } from "lucide-react";
+import { AlertCircle, Archive, Check, ChevronRight, Copy, Download, ImageIcon, Link2, Loader2, LockKeyhole, Mail, Mic, Moon, PanelLeft, Plus, Share2, Sparkles, Sun, WandSparkles, X } from "lucide-react";
 import { languageOptions } from "../i18n";
 import { useTheme } from "../contexts/ThemeContext";
+import { downloadCodeExport } from "../lib/codeZip";
 
 type ContentKind = "blog" | "email" | "code" | "image";
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
@@ -172,6 +173,15 @@ export default function Home() {
       window.open(shareLinks(url)[platform as keyof ReturnType<typeof shareLinks>], "_blank", "noopener,noreferrer");
     } catch { toast.error("We could not prepare your shareable preview."); }
   }
+  async function downloadCodeZip() {
+    if (!activeDraft?.body) return;
+    try {
+      const payload = await downloadCodeExport({ title: activeDraft.title, body: activeDraft.body, language: activeDraft.language, prompt: activeDraft.prompt });
+      toast.success(`Downloaded ${payload.files.length - 1} generated code file${payload.files.length === 2 ? "" : "s"} as ZIP.`);
+    } catch {
+      toast.error("We could not package this code export. Please try again.");
+    }
+  }
 
   if (loading) return <div className="min-h-screen bg-background grid place-items-center"><Loader2 className="animate-spin text-primary" /></div>;
 
@@ -201,7 +211,7 @@ export default function Home() {
           </div>
 
           <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-border/80 bg-card shadow-[0_22px_70px_rgba(46,41,30,.06)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#B36935]">{activeDraft?.kind === "image" ? "Generated image" : t("draftStack")}</p><h2 className="mt-1 font-display text-2xl tracking-tight">{activeDraft?.title ?? t("draftNotSelected")}</h2></div>{activeDraft && <div className="flex gap-1"><Button size="icon" variant="ghost" className="rounded-full" onClick={() => share()}><Copy size={16} /></Button><Button size="icon" variant="ghost" className="rounded-full" onClick={() => share("WhatsApp")}><Share2 size={16} /></Button></div>}</div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#B36935]">{activeDraft?.kind === "image" ? "Generated image" : t("draftStack")}</p><h2 className="mt-1 font-display text-2xl tracking-tight">{activeDraft?.title ?? t("draftNotSelected")}</h2></div>{activeDraft && <div className="flex gap-1">{activeDraft.kind === "code" && activeDraft.body && <Button size="sm" variant="outline" className="rounded-full" onClick={downloadCodeZip}><Archive size={15} />Download ZIP</Button>}<Button size="icon" variant="ghost" className="rounded-full" onClick={() => share()}><Copy size={16} /></Button><Button size="icon" variant="ghost" className="rounded-full" onClick={() => share("WhatsApp")}><Share2 size={16} /></Button></div>}</div>
             {activeDraft ? <div className="p-5 sm:p-7">{activeDraft.kind === "image" && activeDraft.imageUrl ? <div><img src={activeDraft.imageUrl} alt={activeDraft.prompt} className="max-h-[520px] w-full rounded-2xl object-cover" /><div className="mt-4 flex justify-end"><a href={activeDraft.imageUrl} download className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80"><Download size={15} />{t("download")}</a></div></div> : <article className="prose prose-stone max-w-none dark:prose-invert prose-headings:font-display prose-headings:tracking-tight"><Streamdown>{activeDraft.body ?? ""}</Streamdown></article>}<div className="mt-7 border-t border-border pt-5"><label className="mb-2 block text-sm font-semibold">{t("refine")}</label><div className="flex flex-col gap-2 sm:flex-row"><Input value={refinement} onChange={event => setRefinement(event.target.value)} placeholder={t("refinePlaceholder")} className="h-11 rounded-xl" /><Button disabled={generate.isPending || !refinement.trim()} onClick={() => submitGeneration(true)} variant="outline" className="h-11 rounded-xl border-[#9CB9AF] text-[#244F49] dark:text-[#C7F0DD]"><ChevronRight size={16} />{t("refine")}</Button></div></div><div className="mt-5 flex flex-wrap items-center gap-2"><span className="mr-1 text-xs font-semibold text-muted-foreground">{t("share")}:</span>{Object.keys(shareLinks("https://kamvai")).map(platform => <Button key={platform} onClick={() => share(platform)} size="sm" variant="ghost" className="rounded-full text-xs">{platform}</Button>)}<Button onClick={() => share()} size="sm" variant="ghost" className="rounded-full text-xs"><Link2 size={14} />{t("copyLink")}</Button></div></div> : <div className="grid min-h-72 place-items-center p-8 text-center"><div><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-muted"><Sparkles size={20} className="text-muted-foreground" /></div><p className="mt-4 font-display text-xl">A calm place to begin.</p><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{t("noDrafts")}</p></div></div>}
           </div>
         </section>

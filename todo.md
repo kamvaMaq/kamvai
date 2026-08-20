@@ -46,3 +46,6 @@
 - [x] Add a bottom-of-workspace POPIA privacy and data-rights notice with a direct deletion-request path.
 - [x] Add a Code generator stack selector and include the selected stack in the server-side generation prompt.
 - [x] Add regression coverage for code-generation stack instructions.
+- [x] Add a client-side ZIP download action for generated Code drafts with safe filenames and a clear export manifest.
+- [x] Add regression coverage for code ZIP export packaging.
+- [x] Create and validate a reusable Kamvai full-stack development skill based on the workflow used in this project.
