@@ -14,6 +14,7 @@ describe("protected Kamvai procedures", () => {
     await expect(caller.drafts.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.payments.attempts()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.preferences.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller.promptLibrary.list({})).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.privacy.requestDeletion()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.payments.reconcilePayShap({ requestId: "request", outcome: "confirmed" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });

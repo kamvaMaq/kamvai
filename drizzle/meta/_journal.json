@@ -50,6 +50,20 @@
       "when": 1787219014173,
       "tag": "0006_sharp_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1787224474266,
+      "tag": "0007_cuddly_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1787224879358,
+      "tag": "0008_chemical_rhino",
+      "breakpoints": true
     }
   ]
 }

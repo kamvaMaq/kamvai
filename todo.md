@@ -60,3 +60,10 @@
 - [x] Add a private weekly-goal streak calculation based on real prior-week generation history and the active weekly goal.
 - [x] Add a visual consecutive-week completion streak indicator to the contribution dashboard.
 - [x] Add regression coverage for current-week, prior-week, and broken-streak scenarios.
+- [x] Add a private prompt-library data model with reusable prompt content, content type, category, and favourite state.
+- [x] Add protected Prompt Library procedures for browsing, searching, and toggling saved favourites.
+- [x] Add a responsive Prompt Library UI that applies a selected prompt directly to the active generator.
+- [x] Add regression coverage for prompt-library search and favourite behaviour.
+- [x] Add an explicit Prompt Library error state with a retry action for failed protected queries.
+- [x] Add integration-style regression coverage for protected Prompt Library listing, filtering, favourite save, and favourite removal behaviour.
+- [x] Add transactional database regression coverage for seeded prompt search/filtering and user-scoped favourite toggle/untoggle behaviour.

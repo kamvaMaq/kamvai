@@ -10,6 +10,7 @@ import { preferencesRouter } from "./routers/preferences";
 import { privacyRouter } from "./routers/privacy";
 import { usageRouter } from "./routers/usage";
 import { analyticsRouter } from "./routers/analytics";
+import { promptLibraryRouter } from "./routers/promptLibrary";
 
 export const appRouter = router({
   system: systemRouter,
@@ -26,6 +27,7 @@ export const appRouter = router({
   privacy: privacyRouter,
   usage: usageRouter,
   analytics: analyticsRouter,
+  promptLibrary: promptLibraryRouter,
   drafts: draftsRouter,
   generation: generationRouter,
   payments: paymentsRouter,

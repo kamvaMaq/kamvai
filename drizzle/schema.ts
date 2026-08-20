@@ -1,4 +1,4 @@
-import { index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -24,6 +24,31 @@ export const userPreferences = mysqlTable("user_preferences", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => ({
   userIdUnique: uniqueIndex("user_preferences_user_id_idx").on(table.userId),
+}));
+
+export const promptLibraryFavorites = mysqlTable("prompt_library_favorites", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  userId: int("userId").notNull(),
+  promptId: varchar("promptId", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  userPromptUnique: uniqueIndex("prompt_library_favorites_user_prompt_idx").on(table.userId, table.promptId),
+  userCreatedAt: index("prompt_library_favorites_user_created_idx").on(table.userId, table.createdAt),
+}));
+
+export const promptLibraryItems = mysqlTable("prompt_library_items", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  title: varchar("title", { length: 120 }).notNull(),
+  body: text("body").notNull(),
+  kind: mysqlEnum("kind", ["blog", "email", "code", "image"]).notNull(),
+  category: varchar("category", { length: 64 }).notNull(),
+  isBuiltIn: boolean("isBuiltIn").default(false).notNull(),
+  createdByUserId: int("createdByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  visibilityCreatedAt: index("prompt_library_items_visibility_created_idx").on(table.isBuiltIn, table.createdAt),
+  creatorCreatedAt: index("prompt_library_items_creator_created_idx").on(table.createdByUserId, table.createdAt),
 }));
 
 export const contentDrafts = mysqlTable("content_drafts", {

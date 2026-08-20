@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
@@ -9,6 +9,8 @@ import {
   generationUsages,
   InsertUser,
   payShapPaymentRequests,
+  promptLibraryFavorites,
+  promptLibraryItems,
   userPreferences,
   users,
   voucherRedemptionAttempts,
@@ -16,6 +18,7 @@ import {
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
 import { contributionAnalyticsStart, contributionStreakStart, DEFAULT_WEEKLY_GENERATION_GOAL, summarizeContributionAnalytics } from "./contributionAnalytics";
+import { type PromptKind, promptTemplates } from "./promptLibrary";
 
 const FREE_GENERATION_LIMIT = 10;
 
@@ -79,6 +82,69 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function seedPromptLibrary() {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(promptLibraryItems).values(promptTemplates.map(template => ({
+    id: template.id,
+    title: template.title,
+    body: template.prompt,
+    kind: template.kind,
+    category: template.category,
+    isBuiltIn: true,
+    createdByUserId: null,
+  }))).onDuplicateKeyUpdate({ set: { isBuiltIn: true } });
+}
+
+export async function listPromptLibrary(userId: number, input: { query?: string; kind?: PromptKind } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  await seedPromptLibrary();
+  const rows = await db.select({
+    id: promptLibraryItems.id,
+    title: promptLibraryItems.title,
+    body: promptLibraryItems.body,
+    kind: promptLibraryItems.kind,
+    category: promptLibraryItems.category,
+    isBuiltIn: promptLibraryItems.isBuiltIn,
+    favoriteId: promptLibraryFavorites.id,
+  }).from(promptLibraryItems).leftJoin(promptLibraryFavorites, and(
+    eq(promptLibraryFavorites.promptId, promptLibraryItems.id),
+    eq(promptLibraryFavorites.userId, userId),
+  )).where(or(eq(promptLibraryItems.isBuiltIn, true), eq(promptLibraryItems.createdByUserId, userId))).orderBy(desc(promptLibraryItems.isBuiltIn), desc(promptLibraryItems.createdAt));
+  const query = input.query?.trim().toLocaleLowerCase() ?? "";
+  return rows.filter(prompt => {
+    const matchesKind = !input.kind || prompt.kind === input.kind;
+    const haystack = `${prompt.title} ${prompt.body} ${prompt.category}`.toLocaleLowerCase();
+    return matchesKind && (!query || haystack.includes(query));
+  }).map(({ favoriteId, ...prompt }) => ({ ...prompt, isFavorite: Boolean(favoriteId) }));
+}
+
+export async function togglePromptLibraryFavorite(userId: number, promptId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Prompt Library is temporarily unavailable.");
+  const [visiblePrompt] = await db.select({ id: promptLibraryItems.id }).from(promptLibraryItems).where(and(
+    eq(promptLibraryItems.id, promptId),
+    or(eq(promptLibraryItems.isBuiltIn, true), eq(promptLibraryItems.createdByUserId, userId)),
+  )).limit(1);
+  if (!visiblePrompt) throw new Error("That prompt is not available in your library.");
+  const [existing] = await db.select({ id: promptLibraryFavorites.id }).from(promptLibraryFavorites).where(and(eq(promptLibraryFavorites.userId, userId), eq(promptLibraryFavorites.promptId, promptId))).limit(1);
+  if (existing) {
+    await db.delete(promptLibraryFavorites).where(eq(promptLibraryFavorites.id, existing.id));
+    return { isFavorite: false } as const;
+  }
+  await db.insert(promptLibraryFavorites).values({ id: nanoid(), userId, promptId });
+  return { isFavorite: true } as const;
+}
+
+export async function createUserPrompt(userId: number, input: { title: string; body: string; kind: PromptKind; category: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Prompt Library is temporarily unavailable.");
+  const id = nanoid();
+  await db.insert(promptLibraryItems).values({ ...input, id, isBuiltIn: false, createdByUserId: userId });
+  return { id, ...input, isBuiltIn: false, isFavorite: false };
 }
 
 export async function getUserById(userId: number) {
