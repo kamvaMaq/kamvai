@@ -80,3 +80,8 @@
 - [x] Add My Prompts UI controls for managing tags, filtering by tag, and copying or revoking share links.
 - [x] Add regression coverage for tag isolation, tag filtering, share-link authorization, and link revocation.
 - [x] Add explicit database regression coverage that rejects non-owner creation and revocation of custom-prompt share links.
+- [x] Add anonymous shared-prompt view-count persistence without storing viewer identity or personal data.
+- [x] Add protected owner-only procedures to retrieve basic shared-prompt reach analytics.
+- [x] Display basic view counts in My Prompts share management controls.
+- [x] Add regression coverage for view recording, owner-only analytics, and revoked-link view protection.
+- [x] Add component-level regression coverage for the My Prompts anonymous view-counter display.

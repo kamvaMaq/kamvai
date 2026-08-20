@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { users } from "../drizzle/schema";
-import { createUserPrompt, deleteUserPrompt, getDb, getPublicPrompt, listPromptLibrary, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
+import { createUserPrompt, deleteUserPrompt, getDb, getPublicPrompt, getUserPromptShareAnalytics, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "./db";
 
 describe("Prompt Library database integration", () => {
   it("seeds searchable prompts and persists a favourite only for the active user", async () => {
@@ -59,7 +59,12 @@ describe("Prompt Library database integration", () => {
       await expect(shareUserPrompt(user.id + 1_000_000, created.id)).rejects.toThrow("not available to you");
       await expect(revokeUserPromptShare(user.id + 1_000_000, created.id)).rejects.toThrow("not available to you");
       const shared = await shareUserPrompt(user.id, created.id);
-      await expect(getPublicPrompt(shared.slug)).resolves.toMatchObject({ title: "Campaign callout", kind: "email" });
+      const publicPrompt = await getPublicPrompt(shared.slug);
+      expect(publicPrompt).toMatchObject({ title: "Campaign callout", kind: "email" });
+      await recordPublicPromptView(publicPrompt!.id);
+      await recordPublicPromptView(publicPrompt!.id);
+      await expect(getUserPromptShareAnalytics(user.id, created.id)).resolves.toEqual({ views: 2 });
+      await expect(getUserPromptShareAnalytics(user.id + 1_000_000, created.id)).rejects.toThrow("not available to you");
       await expect(revokeUserPromptShare(user.id, created.id)).resolves.toEqual({ success: true });
       await expect(getPublicPrompt(shared.slug)).resolves.toBeNull();
       await expect(updateUserPrompt(user.id, created.id, { title: "Campaign follow-up", category: "Marketing", kind: "email", body: "Draft a concise follow-up email for [AUDIENCE]." })).resolves.toMatchObject({ title: "Campaign follow-up" });

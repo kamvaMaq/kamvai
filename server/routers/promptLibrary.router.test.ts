@@ -5,8 +5,10 @@ const database = vi.hoisted(() => ({
   createUserPrompt: vi.fn(),
   deleteUserPrompt: vi.fn(),
   getPublicPrompt: vi.fn(),
+  getUserPromptShareAnalytics: vi.fn(),
   listPromptLibrary: vi.fn(),
   revokeUserPromptShare: vi.fn(),
+  recordPublicPromptView: vi.fn(),
   setUserPromptTags: vi.fn(),
   shareUserPrompt: vi.fn(),
   togglePromptLibraryFavorite: vi.fn(),
@@ -33,6 +35,8 @@ describe("protected Prompt Library router", () => {
     database.setUserPromptTags.mockResolvedValue({ tags: ["sales"] });
     database.shareUserPrompt.mockResolvedValue({ slug: "shared-prompt-link" });
     database.revokeUserPromptShare.mockResolvedValue({ success: true });
+    database.getUserPromptShareAnalytics.mockResolvedValue({ views: 4 });
+    database.recordPublicPromptView.mockResolvedValue(undefined);
   });
 
   it("passes trimmed search, locale, kind, and favourites filters to the private library helper", async () => {
@@ -68,5 +72,19 @@ describe("protected Prompt Library router", () => {
     expect(database.shareUserPrompt).toHaveBeenCalledWith(42, "custom-prompt");
     await caller.revokeShare({ promptId: "custom-prompt" });
     expect(database.revokeUserPromptShare).toHaveBeenCalledWith(42, "custom-prompt");
+  });
+
+  it("returns reach only to the owner and records a view only for a valid public link", async () => {
+    const caller = promptLibraryRouter.createCaller(authenticatedContext);
+    await expect(caller.shareAnalytics({ promptId: "custom-prompt" })).resolves.toEqual({ views: 4 });
+    expect(database.getUserPromptShareAnalytics).toHaveBeenCalledWith(42, "custom-prompt");
+
+    database.getPublicPrompt.mockResolvedValueOnce(null);
+    await expect(caller.public({ slug: "revoked-share-link" })).resolves.toBeNull();
+    expect(database.recordPublicPromptView).not.toHaveBeenCalled();
+
+    database.getPublicPrompt.mockResolvedValueOnce({ id: "custom-prompt", title: "Shared", body: "Prompt body", kind: "email", category: "Marketing" });
+    await expect(caller.public({ slug: "active-share-link" })).resolves.toEqual({ title: "Shared", body: "Prompt body", kind: "email", category: "Marketing" });
+    expect(database.recordPublicPromptView).toHaveBeenCalledWith("custom-prompt");
   });
 });

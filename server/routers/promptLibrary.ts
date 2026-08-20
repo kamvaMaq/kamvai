@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createUserPrompt, deleteUserPrompt, getPublicPrompt, listPromptLibrary, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "../db";
+import { createUserPrompt, deleteUserPrompt, getPublicPrompt, getUserPromptShareAnalytics, listPromptLibrary, recordPublicPromptView, revokeUserPromptShare, setUserPromptTags, shareUserPrompt, togglePromptLibraryFavorite, updateUserPrompt } from "../db";
 import { promptKinds, promptLocales } from "../promptLibrary";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -33,5 +33,12 @@ export const promptLibraryRouter = router({
   setTags: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32), tags: z.array(z.string().trim().min(2).max(32)).max(8) })).mutation(async ({ ctx, input }) => setUserPromptTags(ctx.user.id, input.promptId, input.tags)),
   share: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).mutation(async ({ ctx, input }) => shareUserPrompt(ctx.user.id, input.promptId)),
   revokeShare: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).mutation(async ({ ctx, input }) => revokeUserPromptShare(ctx.user.id, input.promptId)),
-  public: publicProcedure.input(z.object({ slug: z.string().min(8).max(40) })).query(({ input }) => getPublicPrompt(input.slug)),
+  shareAnalytics: protectedProcedure.input(z.object({ promptId: z.string().min(1).max(32) })).query(({ ctx, input }) => getUserPromptShareAnalytics(ctx.user.id, input.promptId)),
+  public: publicProcedure.input(z.object({ slug: z.string().min(8).max(40) })).query(async ({ input }) => {
+    const prompt = await getPublicPrompt(input.slug);
+    if (!prompt) return null;
+    await recordPublicPromptView(prompt.id);
+    const { id: _id, ...publicPrompt } = prompt;
+    return publicPrompt;
+  }),
 });

@@ -12,6 +12,7 @@ import {
   promptLibraryFavorites,
   promptLibraryItemTags,
   promptLibraryItems,
+  promptLibraryShareViews,
   promptLibraryTags,
   userPreferences,
   users,
@@ -126,9 +127,12 @@ export async function listPromptLibrary(userId: number, input: { query?: string;
   const query = input.query?.trim().toLocaleLowerCase() ?? "";
   const ownedPromptIds = rows.filter(prompt => prompt.createdByUserId === userId).map(prompt => prompt.id);
   const tagsByPrompt = new Map<string, string[]>();
+  const viewsByPrompt = new Map<string, number>();
   if (ownedPromptIds.length) {
     const tags = await db.select({ promptId: promptLibraryItemTags.promptId, name: promptLibraryTags.name }).from(promptLibraryItemTags).innerJoin(promptLibraryTags, eq(promptLibraryItemTags.tagId, promptLibraryTags.id)).where(and(inArray(promptLibraryItemTags.promptId, ownedPromptIds), eq(promptLibraryTags.userId, userId)));
     for (const tag of tags) tagsByPrompt.set(tag.promptId, [...(tagsByPrompt.get(tag.promptId) ?? []), tag.name]);
+    const views = await db.select({ promptId: promptLibraryShareViews.promptId, count: sql<number>`count(*)` }).from(promptLibraryShareViews).where(inArray(promptLibraryShareViews.promptId, ownedPromptIds)).groupBy(promptLibraryShareViews.promptId);
+    for (const view of views) viewsByPrompt.set(view.promptId, Number(view.count));
   }
   const selectedTag = input.tag?.trim().toLocaleLowerCase();
   return rows.filter(prompt => {
@@ -136,7 +140,7 @@ export async function listPromptLibrary(userId: number, input: { query?: string;
     const haystack = `${prompt.title} ${prompt.body} ${prompt.category}`.toLocaleLowerCase();
     const tags = tagsByPrompt.get(prompt.id) ?? [];
     return matchesKind && (!input.favoritesOnly || Boolean(prompt.favoriteId)) && (!selectedTag || tags.includes(selectedTag)) && (!query || haystack.includes(query));
-  }).map(({ favoriteId, createdByUserId, publicSlug, ...prompt }) => ({ ...prompt, tags: tagsByPrompt.get(prompt.id) ?? [], isFavorite: Boolean(favoriteId), isOwned: createdByUserId === userId, shareSlug: createdByUserId === userId ? publicSlug : null }));
+  }).map(({ favoriteId, createdByUserId, publicSlug, ...prompt }) => ({ ...prompt, tags: tagsByPrompt.get(prompt.id) ?? [], isFavorite: Boolean(favoriteId), isOwned: createdByUserId === userId, shareSlug: createdByUserId === userId ? publicSlug : null, viewCount: createdByUserId === userId ? viewsByPrompt.get(prompt.id) ?? 0 : 0 }));
 }
 
 export async function togglePromptLibraryFavorite(userId: number, promptId: string) {
@@ -225,8 +229,20 @@ export async function revokeUserPromptShare(userId: number, promptId: string) {
 export async function getPublicPrompt(publicSlug: string) {
   const db = await getDb();
   if (!db) return null;
-  const [prompt] = await db.select({ title: promptLibraryItems.title, body: promptLibraryItems.body, kind: promptLibraryItems.kind, category: promptLibraryItems.category }).from(promptLibraryItems).where(and(eq(promptLibraryItems.publicSlug, publicSlug), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
+  const [prompt] = await db.select({ id: promptLibraryItems.id, title: promptLibraryItems.title, body: promptLibraryItems.body, kind: promptLibraryItems.kind, category: promptLibraryItems.category }).from(promptLibraryItems).where(and(eq(promptLibraryItems.publicSlug, publicSlug), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
   return prompt ?? null;
+}
+
+export async function recordPublicPromptView(promptId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(promptLibraryShareViews).values({ id: nanoid(), promptId });
+}
+
+export async function getUserPromptShareAnalytics(userId: number, promptId: string) {
+  const { db } = await requireOwnedCustomPrompt(userId, promptId);
+  const [result] = await db.select({ views: sql<number>`count(*)` }).from(promptLibraryShareViews).where(eq(promptLibraryShareViews.promptId, promptId));
+  return { views: Number(result?.views ?? 0) };
 }
 
 export async function getUserById(userId: number) {

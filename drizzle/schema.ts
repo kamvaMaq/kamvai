@@ -75,6 +75,14 @@ export const promptLibraryItemTags = mysqlTable("prompt_library_item_tags", {
   tagCreatedAt: index("prompt_library_item_tags_tag_created_idx").on(table.tagId, table.createdAt),
 }));
 
+export const promptLibraryShareViews = mysqlTable("prompt_library_share_views", {
+  id: varchar("id", { length: 32 }).primaryKey(),
+  promptId: varchar("promptId", { length: 32 }).notNull(),
+  viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+}, table => ({
+  promptViewedAt: index("prompt_library_share_views_prompt_viewed_idx").on(table.promptId, table.viewedAt),
+}));
+
 export const contentDrafts = mysqlTable("content_drafts", {
   id: varchar("id", { length: 32 }).primaryKey(),
   userId: int("userId").notNull(),

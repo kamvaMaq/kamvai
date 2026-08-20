@@ -17,7 +17,8 @@ const prompt = vi.hoisted(() => ({
   isBuiltIn: false,
   isFavorite: false,
   isOwned: true,
-  shareSlug: null,
+  shareSlug: "shared-prompt-link",
+  viewCount: 7,
 }));
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" } }) }));
@@ -49,6 +50,7 @@ describe("My Prompts generator application", () => {
     render(createElement(PromptLibrary, { onApply }));
     await user.click(screen.getByRole("button", { name: "Prompt Library" }));
     await user.click(screen.getByRole("button", { name: "My Prompts" }));
+    expect(screen.getByText(/7 views · anonymous reach/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Use" }));
     expect(onApply).toHaveBeenCalledWith({ title: "Campaign follow-up", kind: "email", prompt: "Draft a concise follow-up email for [AUDIENCE]." });
   });
