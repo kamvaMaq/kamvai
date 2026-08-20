@@ -6,10 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const testState = vi.hoisted(() => {
   const mutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, data: undefined };
   const query = { data: undefined, isLoading: false, isError: false, refetch: vi.fn() };
+  const allowance = { unlimited: false, remaining: 7, resetsAt: new Date("2026-08-21T10:00:00.000Z"), used: 3, limit: 10 };
+  const usageState = { data: allowance as typeof allowance | undefined, isLoading: false, isError: false, refetch: vi.fn() };
   const drafts: Array<{ id: string; title: string; kind: "blog" | "chat" | "video"; updatedAt: Date; body: string; language: string; prompt: string }> = [];
   const utils = new Proxy({}, { get: (_target, property) => property === "invalidate" || property === "fetch" ? vi.fn() : utils });
-  const trpc = new Proxy({ useUtils: () => utils }, { get: (_target, namespace) => namespace === "useUtils" ? () => utils : new Proxy({}, { get: (_router, procedure) => ({ useQuery: () => namespace === "drafts" && procedure === "list" ? { ...query, data: drafts } : query, useMutation: () => mutation }) }) });
-  return { trpc, promptOpen: vi.fn(), drafts };
+  const trpc = new Proxy({ useUtils: () => utils }, { get: (_target, namespace) => namespace === "useUtils" ? () => utils : new Proxy({}, { get: (_router, procedure) => ({ useQuery: () => namespace === "drafts" && procedure === "list" ? { ...query, data: drafts } : namespace === "usage" && procedure === "status" ? usageState : query, useMutation: () => mutation }) }) });
+  return { trpc, promptOpen: vi.fn(), drafts, allowance, usageState };
 });
 
 vi.mock("@/lib/trpc", () => ({ trpc: testState.trpc }));
@@ -30,7 +32,7 @@ vi.mock("../lib/codeZip", () => ({ downloadCodeExport: vi.fn() }));
 import Home from "./Home";
 
 describe("focused workspace navigation", () => {
-  beforeEach(() => { cleanup(); testState.promptOpen.mockReset(); testState.drafts.splice(0); });
+  beforeEach(() => { cleanup(); testState.promptOpen.mockReset(); testState.drafts.splice(0); testState.usageState.data = testState.allowance; testState.usageState.isLoading = false; testState.usageState.isError = false; });
 
   it("opens deferred payment choices and continues into the PayShap request flow", () => {
     render(createElement(Home));
@@ -132,5 +134,38 @@ describe("focused workspace navigation", () => {
       expect(screen.getByRole("button", { name: "Create video plan" })).toBeTruthy();
       unmount();
     }
+  });
+
+  it("reveals the remaining generation credits from the compact sidebar button", () => {
+    render(createElement(Home));
+
+    const trigger = screen.getByRole("button", { name: "Remaining credits" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText("7 generation credits remaining.")).toBeTruthy();
+  });
+
+  it("explains loading and unavailable allowance states from the sidebar button", () => {
+    testState.usageState.data = undefined;
+    testState.usageState.isLoading = true;
+    const loadingView = render(createElement(Home));
+    fireEvent.click(screen.getByRole("button", { name: "Remaining credits" }));
+    expect(screen.getByText("Checking allowance…")).toBeTruthy();
+    loadingView.unmount();
+
+    testState.usageState.isLoading = false;
+    testState.usageState.isError = true;
+    render(createElement(Home));
+    fireEvent.click(screen.getByRole("button", { name: "Remaining credits" }));
+    expect(screen.getByText(/remaining credits are temporarily unavailable/i)).toBeTruthy();
+  });
+
+  it("explains unlimited pass access from the sidebar button", () => {
+    testState.usageState.data = { unlimited: true, remaining: null as unknown as number, resetsAt: new Date("2026-08-21T10:00:00.000Z"), used: 0, limit: null as unknown as number };
+    render(createElement(Home));
+    fireEvent.click(screen.getByRole("button", { name: "Remaining credits" }));
+    expect(screen.getByText("Unlimited access is active.")).toBeTruthy();
+    expect(screen.getByText("Your current pass is covering all generations.")).toBeTruthy();
   });
 });

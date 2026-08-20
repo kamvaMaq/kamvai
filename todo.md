@@ -125,3 +125,5 @@
 - [x] Add a general-purpose AI chat mode for questions and requests outside the existing creation formats.
 - [x] Add a video planning option with clear output handling alongside image, blog, email, and code modes; rendered video-file generation remains a future integration.
 - [x] Add responsive regression coverage that confirms general chat and video planning mode switching remains reachable at desktop and mobile viewport widths.
+- [x] Add a compact sidebar button that reveals the signed-in user’s remaining Kamvai generation allowance on demand.
+- [x] Add regression coverage for allowance-button visibility and allowance-state feedback.
