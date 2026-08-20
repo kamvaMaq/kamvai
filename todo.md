@@ -106,3 +106,13 @@
 - [x] Add prompt-area file chips that display the user’s currently stored attached documents.
 - [x] Add accessible drag-and-drop uploads to the Document Workspace dialog while preserving file picker support.
 - [x] Add regression coverage for attachment chips and drag-and-drop file selection behavior.
+- [x] Refactor the workspace so the generator is the primary focused surface and secondary tools open only when selected.
+- [x] Add clear on-demand navigation for contribution analytics, weekly goals, streaks, document attachments, prompt tools, and payment activity.
+- [x] Make subscription offers clickable and route users directly to the PayShap payment flow.
+- [x] Add regression coverage for focused workspace navigation and subscription payment entry actions.
+- [x] Adapt the focused workspace visual hierarchy to the supplied centered, calm AI-workspace reference.
+- [x] Add a mobile-accessible Prompt Library entry to the focused workspace controls.
+- [x] Verify every secondary workspace tool is hidden by default and reachable through an explicit trigger across responsive layouts.
+- [x] Add a mobile-accessible Privacy & data entry to the focused workspace controls.
+- [x] Extend focused-workspace regression coverage for all explicit secondary-tool triggers across responsive layouts.
+- [x] Add interaction coverage for mobile Prompt Library, mobile Payments, and Sharing panel triggers in the focused workspace.

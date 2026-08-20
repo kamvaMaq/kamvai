@@ -39,7 +39,7 @@ function EmptyPromptState({ title, message }: { title: string; message: string }
   </div></div>;
 }
 
-export function PromptLibrary({ onApply }: { onApply: (template: { prompt: string; kind: PromptKind; title: string }) => void }) {
+export function PromptLibrary({ onApply, triggerClassName = "" }: { onApply: (template: { prompt: string; kind: PromptKind; title: string }) => void; triggerClassName?: string }) {
   const { i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<PromptView>("library");
@@ -137,7 +137,7 @@ export function PromptLibrary({ onApply }: { onApply: (template: { prompt: strin
   const cards = (items: PromptCard[], management = false) => items.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{items.map(prompt => <PromptCardView key={prompt.id} prompt={prompt} management={management} />)}</div> : <EmptyPromptState title={management ? "No custom prompts yet" : favoritesOnly ? "No favourites yet" : "No prompt matches yet"} message={management ? "Create a reusable template to keep your best ideas close." : "Try a different format or a broader search."} />;
 
   return <>
-    <Button variant="outline" className="mb-4 rounded-full border-[#9CB9AF] text-[#244F49] dark:text-[#C7F0DD]" onClick={() => setOpen(true)}><BookOpen size={16} />Prompt Library</Button>
+    <Button variant="outline" className={`mb-4 rounded-full border-[#9CB9AF] text-[#244F49] dark:text-[#C7F0DD] ${triggerClassName}`} onClick={() => setOpen(true)}><BookOpen size={16} />Prompt Library</Button>
     <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[86vh] overflow-y-auto sm:max-w-4xl">
       <DialogHeader><DialogTitle className="font-display text-3xl">Smart Prompt Library</DialogTitle><DialogDescription>{locale === "zu" ? "Qala ngemiyalelo ebhalwe ngesiZulu, noma ulondoloze awakho amathuluzi." : locale === "xh" ? "Qala ngezikhokelo ezibhalwe ngesiXhosa, okanye ugcine ezakho iitemplate." : "Browse reliable starters, save favourites, and manage your own reusable templates."}</DialogDescription></DialogHeader>
       <div className="mt-2 flex flex-wrap gap-2 border-b border-border pb-4"><Button size="sm" variant={view === "library" ? "default" : "outline"} className={view === "library" ? "rounded-xl bg-[#244F49] text-white hover:bg-[#173b36]" : "rounded-xl"} onClick={() => setView("library")}><BookOpen size={14} />Starter library</Button><Button size="sm" variant={view === "mine" ? "default" : "outline"} className={view === "mine" ? "rounded-xl bg-[#244F49] text-white hover:bg-[#173b36]" : "rounded-xl"} onClick={() => setView("mine")}><Plus size={14} />My Prompts</Button></div>
