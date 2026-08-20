@@ -100,3 +100,6 @@
 - [x] Add permitted Word and image upload regression coverage.
 - [x] Add explicit non-owner document download and removal rejection coverage.
 - [x] Add regression coverage that rejects a generic ZIP disguised as a DOCX file.
+- [x] Move the Document Workspace from the dashboard into the generator input section.
+- [x] Add an accessible plus-sign attachment action beside the prompt field with upload allowance feedback.
+- [x] Add regression coverage for opening the inline attachment workspace and preserving the upload controls.
