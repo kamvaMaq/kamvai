@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { generateImage } from "../_core/imageGeneration";
 import { invokeLLM, listLLMModels } from "../_core/llm";
+import { createCodeStackInstruction } from "../codeStack";
 import {
   addDraftRevision,
   createDraft,
@@ -29,6 +30,7 @@ export const generationRouter = router({
     kind: kindSchema,
     brief: z.string().min(8).max(6000),
     language: z.string().min(2).max(16),
+    stack: z.string().trim().min(2).max(120).optional(),
     draftId: z.string().min(1).optional(),
     refinement: z.string().min(3).max(2000).optional(),
   })).mutation(async ({ ctx, input }) => {
@@ -47,6 +49,7 @@ export const generationRouter = router({
     const targetLanguage = languageNames[input.language] ?? "English";
     const refinement = input.refinement ? `\nRefinement request: ${input.refinement}` : "";
     const priorDraft = existing?.body ? `\nPrior draft:\n${existing.body}` : "";
+    const stackInstruction = input.kind === "code" ? `\n${createCodeStackInstruction(input.stack)}` : "";
 
     let body: string | null = null;
     let imageUrl: string | null = null;
@@ -65,7 +68,7 @@ export const generationRouter = router({
         model,
         messages: [
           { role: "system", content: `You write clear, useful ${input.kind} content for South African users. Return polished Markdown only. Write entirely in ${targetLanguage}. Respect the requested format, be specific, and do not fabricate sources or personal experiences.` },
-          { role: "user", content: `Brief: ${input.brief}${refinement}${priorDraft}` },
+          { role: "user", content: `Brief: ${input.brief}${stackInstruction}${refinement}${priorDraft}` },
         ],
       });
       body = String(response.choices[0]?.message?.content ?? "").trim();
