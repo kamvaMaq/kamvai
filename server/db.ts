@@ -18,7 +18,7 @@ import {
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
 import { contributionAnalyticsStart, contributionStreakStart, DEFAULT_WEEKLY_GENERATION_GOAL, summarizeContributionAnalytics } from "./contributionAnalytics";
-import { type PromptKind, promptTemplates } from "./promptLibrary";
+import { type PromptKind, type PromptLocale, promptTemplates } from "./promptLibrary";
 
 const FREE_GENERATION_LIMIT = 10;
 
@@ -93,12 +93,13 @@ export async function seedPromptLibrary() {
     body: template.prompt,
     kind: template.kind,
     category: template.category,
+    locale: template.locale,
     isBuiltIn: true,
     createdByUserId: null,
   }))).onDuplicateKeyUpdate({ set: { isBuiltIn: true } });
 }
 
-export async function listPromptLibrary(userId: number, input: { query?: string; kind?: PromptKind } = {}) {
+export async function listPromptLibrary(userId: number, input: { query?: string; kind?: PromptKind; locale?: PromptLocale; favoritesOnly?: boolean } = {}) {
   const db = await getDb();
   if (!db) return [];
   await seedPromptLibrary();
@@ -108,18 +109,23 @@ export async function listPromptLibrary(userId: number, input: { query?: string;
     body: promptLibraryItems.body,
     kind: promptLibraryItems.kind,
     category: promptLibraryItems.category,
+    locale: promptLibraryItems.locale,
     isBuiltIn: promptLibraryItems.isBuiltIn,
+    createdByUserId: promptLibraryItems.createdByUserId,
     favoriteId: promptLibraryFavorites.id,
   }).from(promptLibraryItems).leftJoin(promptLibraryFavorites, and(
     eq(promptLibraryFavorites.promptId, promptLibraryItems.id),
     eq(promptLibraryFavorites.userId, userId),
-  )).where(or(eq(promptLibraryItems.isBuiltIn, true), eq(promptLibraryItems.createdByUserId, userId))).orderBy(desc(promptLibraryItems.isBuiltIn), desc(promptLibraryItems.createdAt));
+  )).where(or(
+    and(eq(promptLibraryItems.isBuiltIn, true), eq(promptLibraryItems.locale, input.locale ?? "en")),
+    eq(promptLibraryItems.createdByUserId, userId),
+  )).orderBy(desc(promptLibraryItems.isBuiltIn), desc(promptLibraryItems.createdAt));
   const query = input.query?.trim().toLocaleLowerCase() ?? "";
   return rows.filter(prompt => {
     const matchesKind = !input.kind || prompt.kind === input.kind;
     const haystack = `${prompt.title} ${prompt.body} ${prompt.category}`.toLocaleLowerCase();
-    return matchesKind && (!query || haystack.includes(query));
-  }).map(({ favoriteId, ...prompt }) => ({ ...prompt, isFavorite: Boolean(favoriteId) }));
+    return matchesKind && (!input.favoritesOnly || Boolean(prompt.favoriteId)) && (!query || haystack.includes(query));
+  }).map(({ favoriteId, createdByUserId, ...prompt }) => ({ ...prompt, isFavorite: Boolean(favoriteId), isOwned: createdByUserId === userId }));
 }
 
 export async function togglePromptLibraryFavorite(userId: number, promptId: string) {
@@ -143,8 +149,27 @@ export async function createUserPrompt(userId: number, input: { title: string; b
   const db = await getDb();
   if (!db) throw new Error("Prompt Library is temporarily unavailable.");
   const id = nanoid();
-  await db.insert(promptLibraryItems).values({ ...input, id, isBuiltIn: false, createdByUserId: userId });
-  return { id, ...input, isBuiltIn: false, isFavorite: false };
+  await db.insert(promptLibraryItems).values({ ...input, id, locale: "en", isBuiltIn: false, createdByUserId: userId });
+  return { id, ...input, locale: "en", isBuiltIn: false, isFavorite: false, isOwned: true };
+}
+
+export async function updateUserPrompt(userId: number, promptId: string, input: { title: string; body: string; kind: PromptKind; category: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Prompt Library is temporarily unavailable.");
+  const [existing] = await db.select({ id: promptLibraryItems.id }).from(promptLibraryItems).where(and(eq(promptLibraryItems.id, promptId), eq(promptLibraryItems.createdByUserId, userId), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
+  if (!existing) throw new Error("That custom prompt is not available for editing.");
+  await db.update(promptLibraryItems).set(input).where(eq(promptLibraryItems.id, promptId));
+  return { id: promptId, ...input };
+}
+
+export async function deleteUserPrompt(userId: number, promptId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Prompt Library is temporarily unavailable.");
+  const [existing] = await db.select({ id: promptLibraryItems.id }).from(promptLibraryItems).where(and(eq(promptLibraryItems.id, promptId), eq(promptLibraryItems.createdByUserId, userId), eq(promptLibraryItems.isBuiltIn, false))).limit(1);
+  if (!existing) throw new Error("That custom prompt is not available for removal.");
+  await db.delete(promptLibraryFavorites).where(eq(promptLibraryFavorites.promptId, promptId));
+  await db.delete(promptLibraryItems).where(eq(promptLibraryItems.id, promptId));
+  return { success: true } as const;
 }
 
 export async function getUserById(userId: number) {

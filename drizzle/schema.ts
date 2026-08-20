@@ -42,12 +42,14 @@ export const promptLibraryItems = mysqlTable("prompt_library_items", {
   body: text("body").notNull(),
   kind: mysqlEnum("kind", ["blog", "email", "code", "image"]).notNull(),
   category: varchar("category", { length: 64 }).notNull(),
+  locale: varchar("locale", { length: 8 }).default("en").notNull(),
   isBuiltIn: boolean("isBuiltIn").default(false).notNull(),
   createdByUserId: int("createdByUserId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => ({
   visibilityCreatedAt: index("prompt_library_items_visibility_created_idx").on(table.isBuiltIn, table.createdAt),
+  visibilityLocaleCreatedAt: index("prompt_library_items_visibility_locale_created_idx").on(table.isBuiltIn, table.locale, table.createdAt),
   creatorCreatedAt: index("prompt_library_items_creator_created_idx").on(table.createdByUserId, table.createdAt),
 }));
 

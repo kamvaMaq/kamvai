@@ -8,6 +8,13 @@ describe("smart prompt library", () => {
     expect(codeTemplates.every(template => template.kind === "code")).toBe(true);
   });
 
+  it("returns the complete localized starter collection for isiZulu and isiXhosa", () => {
+    expect(filterPromptTemplates({ locale: "zu" })).toHaveLength(16);
+    expect(filterPromptTemplates({ locale: "xh" })).toHaveLength(16);
+    expect(filterPromptTemplates({ locale: "zu" }).map(template => template.id)).toContain("blog-founder-story-zu");
+    expect(filterPromptTemplates({ locale: "xh" }).map(template => template.id)).toContain("blog-founder-story-xh");
+  });
+
   it("finds templates across title, category, and prompt text", () => {
     expect(filterPromptTemplates({ query: "dashboard" }).map(template => template.id)).toContain("code-dashboard-feature");
     expect(filterPromptTemplates({ query: "visuals" }).every(template => template.category === "Visuals")).toBe(true);

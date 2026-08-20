@@ -1,0 +1,2 @@
+ALTER TABLE `prompt_library_items` ADD `locale` varchar(8) DEFAULT 'en' NOT NULL;--> statement-breakpoint
+CREATE INDEX `prompt_library_items_visibility_locale_created_idx` ON `prompt_library_items` (`isBuiltIn`,`locale`,`createdAt`);

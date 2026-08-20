@@ -67,3 +67,11 @@
 - [x] Add an explicit Prompt Library error state with a retry action for failed protected queries.
 - [x] Add integration-style regression coverage for protected Prompt Library listing, filtering, favourite save, and favourite removal behaviour.
 - [x] Add transactional database regression coverage for seeded prompt search/filtering and user-scoped favourite toggle/untoggle behaviour.
+- [x] Add isiZulu and isiXhosa localized variants for all 16 curated Prompt Library starters.
+- [x] Add a favourites-only Prompt Library filter for the signed-in user.
+- [x] Add secure custom-prompt creation, editing, and deletion procedures scoped to the prompt owner.
+- [x] Add a My Prompts interface for creating, editing, applying, and removing custom templates.
+- [x] Add regression coverage for localization selection, favourites filtering, and custom-prompt ownership management.
+- [x] Add a direct “Use this prompt” action to My Prompts cards.
+- [x] Add regression coverage for applying a custom prompt from My Prompts.
+- [x] Add a component-level regression test that applies an owned custom prompt from the My Prompts tab.
