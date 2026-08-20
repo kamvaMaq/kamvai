@@ -57,3 +57,6 @@
 - [x] Add regression coverage for weekly-goal validation and progress calculation.
 - [x] Add visible success and error feedback for weekly-goal saves in the contribution dashboard.
 - [x] Add router-level regression coverage that rejects weekly goals outside the allowed 1–100 range.
+- [x] Add a private weekly-goal streak calculation based on real prior-week generation history and the active weekly goal.
+- [x] Add a visual consecutive-week completion streak indicator to the contribution dashboard.
+- [x] Add regression coverage for current-week, prior-week, and broken-streak scenarios.

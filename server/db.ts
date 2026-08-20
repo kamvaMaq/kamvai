@@ -15,7 +15,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { sendTransactionalEmail } from "./sendgrid";
-import { contributionAnalyticsStart, DEFAULT_WEEKLY_GENERATION_GOAL, summarizeContributionAnalytics } from "./contributionAnalytics";
+import { contributionAnalyticsStart, contributionStreakStart, DEFAULT_WEEKLY_GENERATION_GOAL, summarizeContributionAnalytics } from "./contributionAnalytics";
 
 const FREE_GENERATION_LIMIT = 10;
 
@@ -152,9 +152,11 @@ export async function getContributionAnalytics(userId: number) {
   if (!db) return summarizeContributionAnalytics([]);
   const now = new Date();
   const periodStart = contributionAnalyticsStart(now);
+  const streakStart = contributionStreakStart(now);
+  const queryStart = streakStart < periodStart ? streakStart : periodStart;
   const records = await db.select({ kind: generationUsages.kind, createdAt: generationUsages.createdAt }).from(generationUsages).where(and(
     eq(generationUsages.userId, userId),
-    gte(generationUsages.createdAt, periodStart),
+    gte(generationUsages.createdAt, queryStart),
   ));
   const [preferences] = await db.select({ weeklyGenerationGoal: userPreferences.weeklyGenerationGoal }).from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
   return summarizeContributionAnalytics(records, now, preferences?.weeklyGenerationGoal ?? DEFAULT_WEEKLY_GENERATION_GOAL);

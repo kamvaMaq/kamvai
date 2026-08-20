@@ -31,6 +31,33 @@ export function contributionAnalyticsStart(now = new Date()) {
   return weekStart < monthStart ? weekStart : monthStart;
 }
 
+export function contributionStreakStart(now = new Date(), weeks = 52) {
+  const start = startOfUtcWeek(now);
+  start.setUTCDate(start.getUTCDate() - (Math.max(1, weeks) - 1) * 7);
+  return start;
+}
+
+export function calculateWeeklyGoalStreak(records: ContributionRecord[], now = new Date(), weeklyGoal = DEFAULT_WEEKLY_GENERATION_GOAL) {
+  const goal = Math.max(1, Math.min(100, Math.round(weeklyGoal)));
+  const weekCounts = new Map<string, number>();
+  records.forEach(record => {
+    const createdAt = normalizeDatabaseTimestamp(record.createdAt);
+    if (!createdAt) return;
+    const weekKey = keyForDate(startOfUtcWeek(createdAt));
+    weekCounts.set(weekKey, (weekCounts.get(weekKey) ?? 0) + 1);
+  });
+  const currentWeekStart = startOfUtcWeek(now);
+  let weeks = 0;
+  for (let offset = 0; offset < 52; offset += 1) {
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setUTCDate(currentWeekStart.getUTCDate() - offset * 7);
+    if ((weekCounts.get(keyForDate(weekStart)) ?? 0) < goal) break;
+    weeks += 1;
+  }
+  const currentWeekCount = weekCounts.get(keyForDate(currentWeekStart)) ?? 0;
+  return { weeks, goal, currentWeekCompleted: currentWeekCount >= goal, currentWeekCount };
+}
+
 export function summarizeContributionAnalytics(records: ContributionRecord[], now = new Date(), weeklyGoal = DEFAULT_WEEKLY_GENERATION_GOAL) {
   const weekStart = startOfUtcWeek(now);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -63,6 +90,7 @@ export function summarizeContributionAnalytics(records: ContributionRecord[], no
   const contentMix = contributionKinds.map(kind => ({ kind, count: byKind.get(kind) ?? 0 }));
   const mostUsed = contentMix.reduce((best, item) => item.count > best.count ? item : best, contentMix[0]);
   const goalProgress = calculateWeeklyGoalProgress(weekTotal, weeklyGoal);
+  const goalStreak = calculateWeeklyGoalStreak(validRecords, now, weeklyGoal);
 
   return {
     weekTotal,
@@ -73,6 +101,7 @@ export function summarizeContributionAnalytics(records: ContributionRecord[], no
     mostUsedKind: mostUsed?.count ? mostUsed.kind : null,
     weeklyGoal: goalProgress.goal,
     goalProgress,
+    goalStreak,
     generatedSince: monthStart,
   };
 }
