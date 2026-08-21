@@ -127,3 +127,7 @@
 - [x] Add responsive regression coverage that confirms general chat and video planning mode switching remains reachable at desktop and mobile viewport widths.
 - [x] Add a compact sidebar button that reveals the signed-in user’s remaining Kamvai generation allowance on demand.
 - [x] Add regression coverage for allowance-button visibility and allowance-state feedback.
+- [x] Redesign the primary workspace with a cleaner professional visual hierarchy and reduced visual noise.
+- [x] Refine desktop sidebar navigation, creation-mode controls, and content composition for faster scanning.
+- [x] Improve mobile spacing, controls, and hierarchy while preserving access to all existing workflows.
+- [x] Add regression coverage for the redesigned workspace controls and run responsive visual validation.

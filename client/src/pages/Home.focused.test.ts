@@ -122,6 +122,17 @@ describe("focused workspace navigation", () => {
     expect(screen.getByRole("button", { name: "Create video plan" })).toBeTruthy();
   });
 
+  it("keeps the professional workspace composition and clear selected-mode state", () => {
+    const { container } = render(createElement(Home));
+    expect(container.querySelector(".workspace-shell")).toBeTruthy();
+    expect(container.querySelector(".workspace-sidebar")).toBeTruthy();
+    expect(container.querySelector(".workspace-composer")).toBeTruthy();
+    expect(container.querySelector(".workspace-mode-grid")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /General chat/ }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: /Blog post/ }));
+    expect(screen.getByRole("button", { name: /Blog post/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("keeps general chat and video planning modes reachable at desktop and mobile viewports", () => {
     for (const width of [375, 1280]) {
       Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
