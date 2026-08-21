@@ -82,7 +82,7 @@ describe("focused workspace navigation", () => {
     expect(screen.queryByRole("button", { name: /Saved campaign/ })).toBeNull();
     expect(screen.queryByText("draftNotSelected")).toBeNull();
 
-    const brief = screen.getByLabelText("What can Kamvai help with?");
+    const brief = screen.getByLabelText("What are you shaping today?");
     fireEvent.change(brief, { target: { value: "An unfinished brief" } });
     fireEvent.click(screen.getByRole("button", { name: "newDraft" }));
     expect((brief as HTMLTextAreaElement).value).toBe("");
@@ -112,7 +112,7 @@ describe("focused workspace navigation", () => {
     render(createElement(Home));
 
     expect(screen.getByRole("button", { name: /General chat/ })).toBeTruthy();
-    expect(screen.getByLabelText("What can Kamvai help with?")).toBeTruthy();
+    expect(screen.getByLabelText("What are you shaping today?")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ask Kamvai" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Video plan/ }));
@@ -125,6 +125,11 @@ describe("focused workspace navigation", () => {
   it("keeps the professional workspace composition and clear selected-mode state", () => {
     const { container } = render(createElement(Home));
     expect(container.querySelector(".workspace-shell")).toBeTruthy();
+    expect(container.querySelector(".premium-header")).toBeTruthy();
+    expect(container.querySelector(".kamvai-trace")).toBeTruthy();
+    expect(container.querySelector(".brand-lockup")).toBeTruthy();
+    const mark = screen.getByAltText("Kamvai mark") as HTMLImageElement;
+    expect(mark.src).toContain("kamvai-premium-mark_7acaf8e2.png");
     expect(container.querySelector(".workspace-sidebar")).toBeTruthy();
     expect(container.querySelector(".workspace-composer")).toBeTruthy();
     expect(container.querySelector(".workspace-mode-grid")).toBeTruthy();
